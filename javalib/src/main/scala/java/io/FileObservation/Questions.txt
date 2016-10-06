@@ -1,0 +1,6 @@
+Questions : 
+- How to contourn static from the java library ?
+	* make a singleton object with all those vars ?
+	* assume I won't have to use them as static ?
+- should I keep the javadocs and comments from the apache harmony implementation ?
+- can i drop the serialVersionUID ? 

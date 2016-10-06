@@ -1,0 +1,8 @@
+native oneTimeInitialisation:
+
+FindClass : ???
+
+
+HARMONY_CACHE_SET(JNIEnv * env, , jobject v) : is a macro defined in classlib/modules/portlib/src/main/native/include/shared/libglob.h
+	: (((JniIDCache*) HY_VMLS_GET((env), HARMONY_ID_CACHE))->x = (v))
+	HY_VMLS_GET: 
