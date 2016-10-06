@@ -74,10 +74,11 @@ class File private () extends Serializable with Comparable[File] {
 	 * @throws NullPointerException
 	 *             if {@code name} is {@code null}.
 	 */
-	def this(File dirPath, String name) = {
+	def this(File dirPath, String name): File = {
 		if(name == null) throw NullPointerException()
 		if(dir == null) path = fixSashes(name)
 		else path = calculatePath(dirPath, name)
+		this()
 	}
 
 
@@ -87,9 +88,10 @@ class File private () extends Serializable with Comparable[File] {
      * @param path
      *            the path to be used for the file.
      */
-    def this(path: String) {
+    def this(path: String): File {
         // path == null check & NullPointerException thrown by fixSlashes
         this.path = fixSlashes(path)
+        this()
     }
 
     /**
@@ -106,9 +108,34 @@ class File private () extends Serializable with Comparable[File] {
      * @see #toURI
      * @see java.net.URI
      */
-    public File(URI uri) {
+    def File(URI uri): File {
         // check pre-conditions
         checkURI(uri);
         this.path = fixSlashes(uri.getPath());
+        this()
+    }
+
+    private def calculePath(dirPath: String, name: Sting): String = {
+    	val path: String = fixSlashes(dirPath)
+    	if(!name.isEmpty || path.isEmpty){
+    		//Remove all the proceeding separator chars from name
+    		var name: String = fixSlashes(name)
+    		var separatorIndex: Int = 0;
+
+    		while(separatorIndex < name.length() && 
+    			name(separatorIndex) == separatorChar){
+    			speratorIndex++
+    		}
+
+    		if(separatorIndex > 0){
+    			name = name.substring(separatorIndex, name.length())
+    		}
+    		// Ensure there is a separator char between dirPath and name
+    		val pathLength: Int = path.length()
+    		if(pathLength > 0 && path(pathLength-1 == separatorChar){
+    			path + name;
+    		} else path + separatorChar + name
+    	}
+    	else path
     }
 }
