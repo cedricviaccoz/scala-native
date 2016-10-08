@@ -5,7 +5,10 @@ class File private () extends Serializable with Comparable[File] {
   	def this(parent: String, child: String) = this()
   	def this(parent: File, child: String) = this()
 
-  	def compareTo(file: File): scala.Int = ???
+  	def compareTo(file: File): scala.Int = {
+        if(caseSensitive) this.getPath().compareTo(file.getPath())
+        else this.getPath().compareToIgnoreCase(file.getPath())
+    }
 
 
   	private var path: String;
@@ -16,7 +19,7 @@ class File private () extends Serializable with Comparable[File] {
 
 	def this(File dirPath, String name): File = {
 		if(name == null) throw NullPointerException()
-		if(dir == null) path = fixSashes(name)
+		if(dirPath == null) path = fixSashes(name)
 		else path = calculatePath(dirPath, name)
 		this()
 	}
@@ -55,12 +58,11 @@ class File private () extends Serializable with Comparable[File] {
     	else path
     }
 
+    //according to apache, only Windows systems are case insensitive
     private def isCaseSensitiveImpl: Boolean = {
         !System.getProperty("os.name").toLowerCase().contains("win")
     }
 }
-
-
 
 object File{
 	val separatorChar: Char;
