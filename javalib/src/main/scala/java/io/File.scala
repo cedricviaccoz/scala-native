@@ -7,18 +7,6 @@ class File private () extends Serializable with Comparable[File] {
 
   	def compareTo(file: File): scala.Int = ???
 
-  	object Statîcs{
-		val separatorChar: Char;
-		val separator: String;
-	    val pathSeparatorChar: Char;
-	    val pathSeparator: String;
-	    private var counter: Int = 0;
-	    private var counterBase: Int = 0;
-	    private class TempFileLocker{}
-	    private val tempFileLocker: TempFileLocker = new TempFileLocker()
-	    private var caseSensitive: Boolean;
-  	}
-
 
   	private var path: String;
 
@@ -51,7 +39,7 @@ class File private () extends Serializable with Comparable[File] {
     		var separatorIndex: Int = 0;
 
     		while(separatorIndex < name.length() && 
-    			name(separatorIndex) == Statics.separatorChar){
+    			name(separatorIndex) == separatorChar){
     			speratorIndex++
     		}
 
@@ -60,10 +48,28 @@ class File private () extends Serializable with Comparable[File] {
     		}
 
     		val pathLength: Int = path.length()
-    		if(pathLength > 0 && path(pathLength-1 == Statics.separatorChar){
+    		if(pathLength > 0 && path(pathLength-1 == separatorChar){
     			path + name;
     		} else path + separatorChar + name
     	}
     	else path
     }
+
+    private def isCaseSensitiveImpl: Boolean = {
+        !System.getProperty("os.name").toLowerCase().contains("win")
+    }
+}
+
+
+
+object File{
+	val separatorChar: Char;
+	val separator: String;
+	val pathSeparatorChar: Char;
+	val pathSeparator: String;
+	private var counter: Int = 0;
+	private var counterBase: Int = 0;
+	private class TempFileLocker{}
+	private val tempFileLocker: TempFileLocker = new TempFileLocker()
+	private var caseSensitive: Boolean;
 }
