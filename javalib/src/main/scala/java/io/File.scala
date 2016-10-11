@@ -19,7 +19,7 @@ class File private () extends Serializable with Comparable[File] {
 
 	def this(File dirPath, String name): File = {
 		if(name == null) throw NullPointerException()
-		if(dirPath == null) path = fixSashes(name)
+		if(path == null) path = fixSashes(name)
 		else path = calculatePath(dirPath, name)
 		this()
 	}
@@ -74,4 +74,16 @@ object File{
 	private class TempFileLocker{}
 	private val tempFileLocker: TempFileLocker = new TempFileLocker()
 	private var caseSensitive: Boolean;
+
+    staticInitializer
+
+    def staticInitializer: Unit = {
+        /*need to determine If I need an implementation of this C funct.*/
+        //oneTimeInitialization();
+
+        separatorChar = System.getProperty("file.separator", "\\")(0)
+        pathSeparator = System.getProperty("path.separator", ";")(0)
+        separator = new String(new Array[Char]{pathSeparatorChar}, 0, 1)
+        caseSensitive = isCaseSensitiveImpl
+    }
 }
