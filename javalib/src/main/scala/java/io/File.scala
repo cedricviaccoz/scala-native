@@ -86,4 +86,19 @@ object File{
     }
 
     private def rootsImpl(): Array[Array[Byte]] = ???
+
+    def listRoots(): Array[File] = {
+       val rootsList: Array[Array[Byte]] = rootsImpl()
+       //implementing rootsList as Option[...] to cotourn null test ?
+       if(rootsList == null) new Array[File](0)
+       else{
+            var result: Array[File] = new Array[File](rootsList.length())
+            for(roots <- rootsList){
+                /*careful there, not sure the _.toString() is the same as
+                    Util.toString(_)
+                */            
+                resulst(i) = new File(rootsList(i).toString())
+            }
+       }
+    }
 }
