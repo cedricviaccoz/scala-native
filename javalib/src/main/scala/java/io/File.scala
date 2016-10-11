@@ -65,18 +65,16 @@ class File private () extends Serializable with Comparable[File] {
      it works properly
     */
     private def fixSlashes(origPath: String): String = {
-        
-        @scala.annotations.tailrec
-        def fixSlashesListIterator(path: List[Char]): List[Char] = 
+        def fixSlashesRec(path: List[Char]): List[Char] =
         path match{
-            case ':'::'/'::'/'::xs => ':'::separatorChar::separatorChar::fixSlashesListIterator(xs)
-            case '/'::'/'::xs => separatorChar::fixSlashesListIterator(xs)
+            case ':'::'/'::'/'::xs => ':'::separatorChar::separatorChar::fixSlashesRec(xs)
+            case '/'::'/'::xs => separatorChar::fixSlashesRec(xs)
             case '/'::Nil => Nil
-            case '/'::xs => separatorChar::fixSlashesListIterator(xs)
-            case x::xs => x::fixSlashesListIterator(xs)
+            case '/'::xs => separatorChar::fixSlashesRec(xs)
+            case x::xs => x::fixSlashesRec(xs)
             case Nil => List()
-        }   
-        fixSlashesListIterator(origPath.toList).toString()
+        }
+        fixSlashesRec(origPath.toList).mkString
     }
 }
 
