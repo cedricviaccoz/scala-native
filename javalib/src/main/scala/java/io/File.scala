@@ -1,4 +1,5 @@
 package java.io
+import java.lang.ArrayList
 
 class File private () extends Serializable with Comparable[File] {
   	def this(parent: String, child: String) = this()
@@ -76,6 +77,153 @@ class File private () extends Serializable with Comparable[File] {
         }
         fixSlashesRec(origPath.toList).mkString
     }
+
+    def canRead(): Boolean = ???
+
+    def canWrite(): Boolean = ???
+    
+    def delere(): Boolean = ???
+
+    //native funct.
+    private def deleteDirImpl(filePath: Array[Byte]): Boolean = ???
+
+    //native funct.
+    private def deleteFileImpl(filePath: Array[Byte]): Boolean = ???
+
+    def deleteOnExit(): Unit = ???
+
+    @override def equals(obj: Any): Boolean = ???
+
+    def exists(): Boolean = ???
+
+    //native funct.
+    def existsImpl(filePath: Array[Byte]): Boolean ???
+
+    def getAbsolutePath(): String = ???
+
+    def getAbsoluteFile(): File = ???
+
+    @throws(classOf[IOException])
+    def getCannonicalPath(): String = ???
+
+    @throws(classOf[IOException])
+    private def resolve(newResult: Array[Byte]): Array[Byte] = ???
+
+    @throws(classOf[IOException])
+    private def resolveLink(pathBytes: Array[Byte]
+                            length: Int,
+                            resolveAbsolute: Boolean): Array[Byte] = ??? 
+
+    @throws(classOf[IOException])
+    def getCannonicalFile(): File = ???
+
+    //native funct.
+    private def getCannonImpl(filePath: Array[Byte]): Array[Byte] = ???
+
+    def getName(): String = ???
+
+    def getParent(): String = ???
+
+    def getParentFile(): File = ???
+
+    @override def hashCode(): Int = ???
+
+    def isAbsolute(): Boolean = ???
+
+    def isDirectory(): Boolean = ???
+
+    //native funct.
+    private def isDirectoryImpl(filePath Array[Byte]): Boolean = ???
+
+    def isFile(): Boolean = ???
+
+    //native funct.
+    private def isFileImpl(filePath: Array[Byte]) = ???
+
+    def isHidden(): Boolean = ???
+
+    //native funct.
+    private def isHiddenImpl(filePath: Array[Byte]): Boolean = ???
+
+    //native funct.
+    private def isReadOnlyImpl(filePath: Array[Byte]): Boolean = ???
+
+    //native funct.
+    private def isWriteOnlyImpl(filePath: Array[Byte]): Boolean = ???
+
+    //native funct.
+    private def getLinkImpl(filePath: Array[Byte]): Array[Byte] = ???
+
+    def lastMofified(): Long = ???
+
+    //native funct.
+    private def lastModifiedImpl(filePath: Array[Byte]): Long = ???
+
+    def setLastMofified(time: Long): Boolean = ???
+
+    //native funct.
+    private def setLastModifiedImpl(filePath: Array[Byte], 
+                                    time: Long): Boolean = ???
+
+    def setReadOnly(): Boolean = ???
+
+    //native funct.
+    def setReadOnlyImpl(path: Array[Byte]): Boolean = ???
+
+    def length(): Long = ???
+
+    //native funct.
+    private def lengthImpl(filePath: Array[Byte]): Long = ???
+
+    def list(): Array[java.lang.String] = ???
+
+    def listFiles(): Array[File] = ???
+
+    def listFiles(filter: FilenameFilter): Array[File] = ???
+
+    def listFiles(filter: FileFilter): Array[File] = ???
+
+    def list(filter: FilenameFIlter): Array[java.lang.String] = ???
+
+    //native funct.
+    private synchronized def listImpl(path: Array[Byte]): Array[Array[Byte]] = ???
+
+    def mkdir(): Boolean = ???
+
+    //native funct.
+    private def mkdirImpl(filePath: Boolean): Boolean = ???
+
+    def mkdirs(): Boolean = ???
+
+    @throws(classOf[IOException])
+    def createNewFile(): Boolean = ???
+
+    //native funct.
+    private def newFileImpl(filePath: Array[Byte]): Int = ???
+
+    /*??? private*/ def properPath(interval: Boolean): Array[Byte] = ???
+
+    def renameTo(des: java.io.File): Boolean = ???
+
+    //native funct.
+    private def renameToImpl(pathExists: Array[Byte], pathNew: Array[Byte]): Boolean = ???
+
+    @override def toString(): String = path
+
+    /*def toURI(): URI = ???
+
+    @throws(classOf[java.net.MalformedURLException])
+    def toURL(): URL = ???*/
+
+    def getAbsoluteName(): String = ???
+
+    /*@throws(classOf[IOException])
+    private def writeObject(stream: ObjectOutputStream): Unit = ???
+
+    @throws(classOf[IOException])
+    @throws(classOf[ClassNotFoundException])
+    private def readObject(stream: ObjectInputStream): Unit = ???*/
+
 }
 
 
@@ -111,8 +259,21 @@ object File{
                 /*careful there, not sure the _.toString() is the same as
                     Util.toString(_)
                 */            
-                resulst(i) = new File(rootsList(i).toString())
+                result(i) = new File(rootsList(i).toString())
             }
        }
     }
+
+    @throws(classOf[IOException])
+    def createTempFile(prefix: String, suffix: String): File = ???
+
+    @throws(classOf[IOException])
+    def createTempFile(prefix: String, 
+                        suffix: String,
+                        directory: File): File = ???
+
+    @throws(classOf[IOException])
+    def genTempFile(prefix: String, 
+                        suffix: String,
+                        directory: File): File = ???
 }
