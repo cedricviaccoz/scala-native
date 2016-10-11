@@ -1,1 +1,2 @@
 Questions : 
+-On File.java there is a lot of use of the java.net (for URL and URI) library, they are not ported in scala-native, can I remove every function making use of it, keep them, or comment them in the wait of a future port of java.net ? 
