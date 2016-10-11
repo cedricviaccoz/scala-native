@@ -60,8 +60,23 @@ class File private () extends Serializable with Comparable[File] {
 
     private def checkURI(uri : URI): Unit = ???
 
+    /*going full functionnal in this one, will need 
+     test to be sure
+     it works properly
+    */
     private def fixSlashes(origPath: String): String = {
-
+        
+        @scala.annotations.tailrec
+        def fixSlashesListIterator(path: List[Char]): List[Char] = 
+        path match{
+            case '/'::xs => separatorChar::fixSlashesListIterator(xs)
+            case '/'::'/'::xs => separatorChar::fixSlashesListIterator(xs)
+            case ':'::'/'::'/'::xs => ':'::'separatorChar'::'separatorChar'::fixSlashesListIterator(xs)
+            case '/'::Nil => path
+            case x::xs => x::fixSlashesListIterator(xs)
+            case Nil => List() 
+        }   
+        fixSlashesListIterator(origPath.toList).toString()
     }
 }
 
@@ -86,6 +101,7 @@ object File{
     }
 
     private def rootsImpl(): Array[Array[Byte]] = ???
+
 
     def listRoots(): Array[File] = {
        val rootsList: Array[Array[Byte]] = rootsImpl()
