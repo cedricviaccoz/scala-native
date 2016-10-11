@@ -69,12 +69,12 @@ class File private () extends Serializable with Comparable[File] {
         @scala.annotations.tailrec
         def fixSlashesListIterator(path: List[Char]): List[Char] = 
         path match{
-            case '/'::xs => separatorChar::fixSlashesListIterator(xs)
+            case ':'::'/'::'/'::xs => ':'::separatorChar::separatorChar::fixSlashesListIterator(xs)
             case '/'::'/'::xs => separatorChar::fixSlashesListIterator(xs)
-            case ':'::'/'::'/'::xs => ':'::'separatorChar'::'separatorChar'::fixSlashesListIterator(xs)
-            case '/'::Nil => path
+            case '/'::Nil => Nil
+            case '/'::xs => separatorChar::fixSlashesListIterator(xs)
             case x::xs => x::fixSlashesListIterator(xs)
-            case Nil => List() 
+            case Nil => List()
         }   
         fixSlashesListIterator(origPath.toList).toString()
     }
