@@ -1,4 +1,14 @@
 Questions : 
+
 -On File.java there is a lot of use of the java.net (for URL and URI) library, they are not ported in scala-native, shoud I: remove every function making use of it, keep them, or comment them in the wait of a future port of java.net ?
+
 -For what used to be final statics fields, would it be "smart" to put them the lazy modifier ? 
+
 -is it a good idea to user functionnal programming to rewrite java functions, or would it be better to really stuck to the way the original Java code was written ?
+
+-Is there a possibility to to get the pointer from an Array ? i.e. get the adress of the first element of the array (in C it would be:
+int array[12];
+int *ptr;
+ptr = &array[0] // or ptr = array )
+
+
