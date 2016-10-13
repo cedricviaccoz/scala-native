@@ -1,5 +1,8 @@
 package java.io
+
 import java.lang.ArrayList
+import Scala.annotation.meta.transient
+import scalanative.native._, stdlib._, stdio,_, string._
 
 class File private () extends Serializable with Comparable[File] {
   	def this(parent: String, child: String) = this()
@@ -12,8 +15,7 @@ class File private () extends Serializable with Comparable[File] {
 
   	private var path: String;
 
-  	/*TODO: find how to make transient work in Scala.*/
-  	//@transient var properPath: Array[Byte]; 
+  	@transient var properPath: Array[Byte]; 
 
 
 	def this(dir: File, name: String): File = {
@@ -28,11 +30,11 @@ class File private () extends Serializable with Comparable[File] {
         this()
     }
 
-    def File(uri: URI): File {
+    /*def File(uri: URI): File {
         checkURI(uri);
         this.path = fixSlashes(uri.getPath());
         this()
-    }
+    }*/
 
     def getPath(): String = new String(path) 
 
@@ -59,7 +61,7 @@ class File private () extends Serializable with Comparable[File] {
     	else path
     }
 
-    private def checkURI(uri : URI): Unit = ???
+    /*private def checkURI(uri : URI): Unit = ???*/
 
     /*going full functionnal in this one, will need 
      test to be sure
@@ -82,7 +84,7 @@ class File private () extends Serializable with Comparable[File] {
 
     def canWrite(): Boolean = ???
     
-    def delere(): Boolean = ???
+    def delete(): Boolean = ???
 
     //native funct.
     private def deleteDirImpl(filePath: Array[Byte]): Boolean = ???
@@ -246,11 +248,43 @@ object File{
         !System.getProperty("os.name").toLowerCase().contains("win")
     }
 
-    private def rootsImpl(): Array[Array[Byte]] = ???
+    @extern object string {
+        def strlen(str: CString): CSize = extern
+    }
+
+    private def rootsImpl(): ArrayList[CString] = {
+
+        val HyMaxPath: Int = 1024
+        var rootString: Array[Char] = new Array[Char](HyMaxPath)
+        var rootCopy: Ptr[Char];
+        
+        /*those four lines are the implementation of
+        the original platformRoots, it seems though to 
+        only work for unix system....*/ 
+        rootStrings(0) = '/'
+        rootStrings(1) = 0.toChar
+        rootStrings(2) = 0.toChar
+        var numRoots: Int = 1
+
+        rootCopy = rootStrings(0).toPtr //????
+        val roots: ArrayList[String] = new ArrayList[String]
+
+        //the initial root (in Unix system) should only be '/'
+        roots.append(rootStrings(0).toCString)
+        var entrylen = strlen(rootCopy.toCString) // ????
+        while(entrylen != 0){
+            rootCopy = rootCopy + entrylen + 1
+            val strToAdd: CString = new CString()// ??? 
+            strcpy(rootCopy, strToAdd)
+            roots.append(strToAdd)
+            entrylen = strlen(rootCopy)
+        }
+        return roots
+    }
 
 
     def listRoots(): Array[File] = {
-       val rootsList: Array[Array[Byte]] = rootsImpl()
+       val rootsList: ArrayList[CString] = rootsImpl()
        //implementing rootsList as Option[...] to cotourn null test ?
        if(rootsList == null) new Array[File](0)
        else{
