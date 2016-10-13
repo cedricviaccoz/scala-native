@@ -248,10 +248,6 @@ object File{
         !System.getProperty("os.name").toLowerCase().contains("win")
     }
 
-    @extern object string {
-        def strlen(str: CString): CSize = extern
-    }
-
     private def rootsImpl(): ArrayList[CString] = {
 
         val HyMaxPath: Int = 1024
