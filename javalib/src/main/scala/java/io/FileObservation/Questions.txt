@@ -11,4 +11,10 @@ int array[12];
 int *ptr;
 ptr = &array[0] // or ptr = array )
 
+-What to do with a synchronized native method ? There is no concurrency available at the moment on scala-native or is it ?
+
+-How to correctly instantiate multiple constructor ?
+
+-When using return types or more broadly, any type, should i use scala.Type ? (in reference of the signature of the return type left at compareTO)
+
 
