@@ -1,44 +1,49 @@
 package java.io
 
-import java.lang.ArrayList
-import Scala.annotation.meta.transient
-import scalanative.native._, stdlib._, stdio,_, string._
+//import scala.annotation.meta.transient
+import scalanative.native._, stdlib._, stdio._, string._
 
 class File private () extends Serializable with Comparable[File] {
-  	def this(parent: String, child: String) = this()
-
-  	def compareTo(file: File): scala.Int = {
-        if(caseSensitive) this.getPath().compareTo(file.getPath())
+  	
+    def compareTo(file: File): scala.Int = {
+        if(caseSensitive) getPath().compareTo(file.getPath())
         else this.getPath().compareToIgnoreCase(file.getPath())
     }
 
-
+    //put it in the constructor ?
   	private var path: String;
 
   	@transient var properPath: Array[Byte]; 
 
-
-	def this(dir: File, name: String): File = {
-		if(name == null) throw NullPointerException()
-		if(dirPath == null) path = fixSashes(name)
+	def this(dir: File, name: String) = {
+        this()
+		if(name == null) throw new NullPointerException()
+		if(dir == null) path = fixSlashes(name)
 		else path = calculatePath(dir.getPath(), name)
-		this()
 	}
 
-    def this(path: String): File {
-        this.path = fixSlashes(path)
+    def this(dirPath: String) = {
         this()
+        path = fixSlashes(dirPath)
+    }
+
+
+    def this(dirPath: String, name: String) = {
+        this()
+        if(name == null) throw new NullPointerException()
+        if(dirPath == null) path = fixSlashes(name)
+        else path = calculatePath(dirPath, name)
     }
 
     /*def File(uri: URI): File {
+        this()
         checkURI(uri);
         this.path = fixSlashes(uri.getPath());
-        this()
     }*/
 
     def getPath(): String = new String(path) 
 
-    private def calculePath(dirPath: String, name: Sting): String = {
+    private def calculePath(dirPath: String, name: String): String = {
     	val path: String = fixSlashes(dirPath)
     	if(!name.isEmpty || path.isEmpty){
     		var name: String = fixSlashes(name)
@@ -54,7 +59,7 @@ class File private () extends Serializable with Comparable[File] {
     		}
 
     		val pathLength: Int = path.length()
-    		if(pathLength > 0 && path(pathLength-1 == separatorChar){
+    		if(pathLength > 0 && path(pathLength-1 == separatorChar)){
     			path + name;
     		} else path + separatorChar + name
     	}
@@ -67,6 +72,7 @@ class File private () extends Serializable with Comparable[File] {
      test to be sure
      it works properly
     */
+    @throws(classOf[NullPointerException])
     private def fixSlashes(origPath: String): String = {
         def fixSlashesRec(path: List[Char]): List[Char] =
         path match{
@@ -77,7 +83,8 @@ class File private () extends Serializable with Comparable[File] {
             case x::xs => x::fixSlashesRec(xs)
             case Nil => List()
         }
-        fixSlashesRec(origPath.toList).mkString
+        if(origPath == null) throw new NullPointerException()
+        else fixSlashesRec(origPath.toList).mkString
     }
 
     def canRead(): Boolean = ???
@@ -94,12 +101,12 @@ class File private () extends Serializable with Comparable[File] {
 
     def deleteOnExit(): Unit = ???
 
-    @override def equals(obj: Any): Boolean = ???
+    override def equals(obj: Any): Boolean = ???
 
     def exists(): Boolean = ???
 
     //native funct.
-    def existsImpl(filePath: Array[Byte]): Boolean ???
+    def existsImpl(filePath: Array[Byte]): Boolean = ???
 
     def getAbsolutePath(): String = ???
 
@@ -112,7 +119,7 @@ class File private () extends Serializable with Comparable[File] {
     private def resolve(newResult: Array[Byte]): Array[Byte] = ???
 
     @throws(classOf[IOException])
-    private def resolveLink(pathBytes: Array[Byte]
+    private def resolveLink(pathBytes: Array[Byte],
                             length: Int,
                             resolveAbsolute: Boolean): Array[Byte] = ??? 
 
@@ -128,14 +135,14 @@ class File private () extends Serializable with Comparable[File] {
 
     def getParentFile(): File = ???
 
-    @override def hashCode(): Int = ???
+    override def hashCode(): Int = ???
 
     def isAbsolute(): Boolean = ???
 
     def isDirectory(): Boolean = ???
 
     //native funct.
-    private def isDirectoryImpl(filePath Array[Byte]): Boolean = ???
+    private def isDirectoryImpl(filePath: Array[Byte]): Boolean = ???
 
     def isFile(): Boolean = ???
 
@@ -185,10 +192,10 @@ class File private () extends Serializable with Comparable[File] {
 
     def listFiles(filter: FileFilter): Array[File] = ???
 
-    def list(filter: FilenameFIlter): Array[java.lang.String] = ???
+    def list(filter: FilenameFilter): Array[java.lang.String] = ???
 
     //native funct.
-    private synchronized def listImpl(path: Array[Byte]): Array[Array[Byte]] = ???
+    private /*synchronized*/ def listImpl(path: Array[Byte]): Array[Array[Byte]] = ???
 
     def mkdir(): Boolean = ???
 
@@ -210,7 +217,7 @@ class File private () extends Serializable with Comparable[File] {
     //native funct.
     private def renameToImpl(pathExists: Array[Byte], pathNew: Array[Byte]): Boolean = ???
 
-    @override def toString(): String = path
+    override def toString(): String = path
 
     /*def toURI(): URI = ???
 
@@ -234,9 +241,9 @@ object File{
     /*need to determine If I need an implementation of this C funct.*/
     //oneTimeInitialization();
 	val separatorChar: Char = System.getProperty("file.separator", "\\")(0);
-	val separator: String = new String(new Array[Char]{pathSeparatorChar}, 0, 1);
-	val pathSeparatorChar: Char;
-	val pathSeparator: String = System.getProperty("path.separator", ";")(0);
+	val pathSeparatorChar: Char = System.getProperty("path.separator", ";")(0);
+    val separator: String = new String(new Array[Char]{separatorChar}, 0, 1);
+	val pathSeparator: String = new String(new Array[Char]{ pathSeparatorChar}, 0, 1);
 	private var counter: Int = 0;
 	private var counterBase: Int = 0;
 	private class TempFileLocker{}
@@ -248,7 +255,7 @@ object File{
         !System.getProperty("os.name").toLowerCase().contains("win")
     }
 
-    private def rootsImpl(): ArrayList[CString] = {
+    private def rootsImpl(): List[CString] = {
 
         val HyMaxPath: Int = 1024
         var rootString: Array[Char] = new Array[Char](HyMaxPath)
@@ -263,13 +270,13 @@ object File{
         var numRoots: Int = 1
 
         rootCopy = rootStrings(0).toPtr //????
-        val roots: ArrayList[String] = new ArrayList[String]
+        val roots: List[String] = new List[String]()
 
         //the initial root (in Unix system) should only be '/'
         roots.append(rootStrings(0).toCString)
         var entrylen = strlen(rootCopy.toCString) // ????
         while(entrylen != 0){
-            rootCopy = rootCopy + entrylen + 1
+            rootCopy = rootCopy + entrylen + 1 //Moving the pointer
             val strToAdd: CString = new CString()// ??? 
             strcpy(rootCopy, strToAdd)
             roots.append(strToAdd)
@@ -280,17 +287,12 @@ object File{
 
 
     def listRoots(): Array[File] = {
-       val rootsList: ArrayList[CString] = rootsImpl()
+       val rootsList: List[CString] = rootsImpl()
        //implementing rootsList as Option[...] to cotourn null test ?
        if(rootsList == null) new Array[File](0)
        else{
             var result: Array[File] = new Array[File](rootsList.length())
-            for(roots <- rootsList){
-                /*careful there, not sure the _.toString() is the same as
-                    Util.toString(_)
-                */            
-                result(i) = new File(rootsList(i).toString())
-            }
+            for(roots <- rootsList) yield new File(roots.toString())            
        }
     }
 
