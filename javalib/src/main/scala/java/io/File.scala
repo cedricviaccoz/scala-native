@@ -14,7 +14,7 @@ class File private () extends Serializable with Comparable[File] {
         else this.getPath().compareToIgnoreCase(file.getPath())
     }
 
-  	@transient var properPath: Array[Byte]; 
+  	@transient var properPath: Array[Byte] = _
 
 	def this(dir: File, name: String) = {
         this()
@@ -38,15 +38,15 @@ class File private () extends Serializable with Comparable[File] {
 
     def getPath(): String = new String(path) 
 
-    private def calculatePath(dirPath: String, name: String): String = {
+    private def calculatePath(dirPath: String, dirName: String): String = {
     	val path: String = fixSlashes(dirPath)
-    	if(!name.isEmpty || path.isEmpty){
-    		var name: String = fixSlashes(name)
+    	if(!dirName.isEmpty || path.isEmpty){
+    		var name: String = fixSlashes(dirName)
     		var separatorIndex: Int = 0;
 
     		while(separatorIndex < name.length() && 
-    			name(separatorIndex) == File.separatorChar){
-    			speratorIndex++
+    			name(separatorIndex) == separatorChar){
+    			separatorIndex += 1
     		}
 
     		if(separatorIndex > 0){
@@ -54,9 +54,9 @@ class File private () extends Serializable with Comparable[File] {
     		}
 
     		val pathLength: Int = path.length()
-    		if(pathLength > 0 && path(pathLength-1 == File.separatorChar)){
-    			path + names
-    		} else path + File.separatorChar + name
+    		if(pathLength > 0 && path(pathLength-1) == separatorChar){
+    			path + name
+    		} else path + separatorChar + name
     	}
     	else path
     }
@@ -96,7 +96,8 @@ class File private () extends Serializable with Comparable[File] {
                 || pathChar == '/') {
                 /* UNC Name requires 2 leading slashes */
                 if ((foundSlash && i == uncIndex) || !foundSlash) {
-                    newPath(newLength++) = separatorChar
+                    newLength += 1
+                    newPath(newLength) = separatorChar
                     foundSlash = true
                 }
             } else {
@@ -110,14 +111,15 @@ class File private () extends Serializable with Comparable[File] {
                     // allow trailing slash after drive letter
                     uncIndex = 2
                 }
-                newPath(newLength++) = pathChar
+                newLength += 1
+                newPath(newLength) = pathChar
                 foundSlash = false
             }
         }
         // remove trailing slash
         if (foundSlash
                 && (newLength > (uncIndex + 1) || (newLength == 2 && newPath(0) != separatorChar))) {
-            newLength--
+            newLength -= 1
         }
 
         return new String(newPath, 0, newLength)
@@ -131,7 +133,7 @@ class File private () extends Serializable with Comparable[File] {
         if (security != null) {
             security.checkRead(path)
         }
-        Array[Byte] pp = properPath(true)
+        var pp: Array[Byte] = properPath(true)
         return existsImpl(pp) && !isWriteOnlyImpl(pp)
     }
 
@@ -291,8 +293,8 @@ object File{
     //oneTimeInitialization();
 	val separatorChar: Char = System.getProperty("file.separator", "\\")(0);
 	val pathSeparatorChar: Char = System.getProperty("path.separator", ";")(0);
-    val separator: String = new String(new Array[Char]{separatorChar}, 0, 1);
-	val pathSeparator: String = new String(new Array[Char]{ pathSeparatorChar}, 0, 1);
+    val separator: String = separatorChar.toString
+	val pathSeparator: String = pathSeparatorChar.toString
 	private var counter: Int = 0;
 	private var counterBase: Int = 0;
 	private class TempFileLocker{}
@@ -300,48 +302,47 @@ object File{
 	private var caseSensitive: Boolean = isCaseSensitiveImpl();
 
     //according to apache, only Windows systems are case insensitive
-    private def isCaseSensitiveImpl: Boolean = {
+    private def isCaseSensitiveImpl(): Boolean = {
         !System.getProperty("os.name").toLowerCase().contains("win")
     }
 
-    private def rootsImpl(): List[CString] = {
+    private def rootsImpl(): List[String] = {
 
         val HyMaxPath: Int = 1024
-        var rootString: Ptr[CChar] = new Array[Char](HyMaxPath)
-        var rootCopy: Ptr[Char];
+        var rootsString: Ptr[Byte] = malloc(HyMaxPath*sizeof[Byte]).cast[Ptr[Byte]]
         
         /*those four lines are the implementation of
         the original platformRoots, it seems though to 
         only work for unix system....*/ 
-        rootStrings(0) = '/'
-        rootStrings(1) = 0.toChar
-        rootStrings(2) = 0.toChar
-        var numRoots: Int = 1
+        rootsString(0) = '/'
+        rootsString(1) = 0
+        rootsString(2) = 0
 
-        rootCopy = rootStrings(0).toPtr //????
-        val roots: List[String] = new List[String]()
-
-        //the initial root (in Unix system) should only be '/'
-        roots.append(rootStrings(0).toCString)
-        var entrylen = strlen(rootCopy.toCString) // ????
+        var rootCopy: Ptr[Byte] = rootsString
+        val answer: List[String] = List()
+        
+        var entrylen: CSize = strlen(rootCopy)
         while(entrylen != 0){
-            rootCopy = rootCopy + entrylen + 1 //Moving the pointer
-            val strToAdd: CString = new CString()// ??? 
-            strcpy(rootCopy, strToAdd)
-            roots.append(strToAdd)
+            var rootname: Ptr[Byte] = malloc(entrylen*sizeof[Byte]).cast[Ptr[Byte]]
+            strncpy(rootname, rootCopy, entrylen)
+            answer.::(fromCString(rootname)) 
+            free(rootname)
+            rootCopy = rootCopy + entrylen + 1
             entrylen = strlen(rootCopy)
         }
-        return roots
+        free(rootsString)
+        return answer
     }
 
 
     def listRoots(): Array[File] = {
-       val rootsList: List[CString] = rootsImpl()
+       val rootsList: List[String] = rootsImpl()
 
        if(rootsList == null) new Array[File](0)
        else{
-            var result: Array[File] = new Array[File](rootsList.length())
-            for(roots <- rootsList) yield new File(roots.toString())            
+            var result: Array[File] = new Array[File](rootsList.length)
+            val l = for(roots <- rootsList) yield new File(roots.toString())  
+            l.toArray        
        }
     }
 
