@@ -1,17 +1,18 @@
 package java.io
 
-//import scala.annotation.meta.transient
+import scala.transient
 import scalanative.native._, stdlib._, stdio._, string._
 
 class File private () extends Serializable with Comparable[File] {
+    import File._
   	
-    def compareTo(file: File): scala.Int = {
+
+    private var path: String =_
+
+    def compareTo(file: File): Int = {
         if(caseSensitive) getPath().compareTo(file.getPath())
         else this.getPath().compareToIgnoreCase(file.getPath())
     }
-
-    //put it in the constructor ?
-  	private var path: String;
 
   	@transient var properPath: Array[Byte]; 
 
@@ -35,22 +36,16 @@ class File private () extends Serializable with Comparable[File] {
         else path = calculatePath(dirPath, name)
     }
 
-    /*def File(uri: URI): File {
-        this()
-        checkURI(uri);
-        this.path = fixSlashes(uri.getPath());
-    }*/
-
     def getPath(): String = new String(path) 
 
-    private def calculePath(dirPath: String, name: String): String = {
+    private def calculatePath(dirPath: String, name: String): String = {
     	val path: String = fixSlashes(dirPath)
     	if(!name.isEmpty || path.isEmpty){
     		var name: String = fixSlashes(name)
     		var separatorIndex: Int = 0;
 
     		while(separatorIndex < name.length() && 
-    			name(separatorIndex) == separatorChar){
+    			name(separatorIndex) == File.separatorChar){
     			speratorIndex++
     		}
 
@@ -59,19 +54,15 @@ class File private () extends Serializable with Comparable[File] {
     		}
 
     		val pathLength: Int = path.length()
-    		if(pathLength > 0 && path(pathLength-1 == separatorChar)){
-    			path + name;
-    		} else path + separatorChar + name
+    		if(pathLength > 0 && path(pathLength-1 == File.separatorChar)){
+    			path + names
+    		} else path + File.separatorChar + name
     	}
     	else path
     }
 
-    /*private def checkURI(uri : URI): Unit = ???*/
-
-    /*going full functionnal in this one, will need 
-     test to be sure
-     it works properly
-    */
+    /*
+    //Okay apparently it is not the time to go full functionnal 
     @throws(classOf[NullPointerException])
     private def fixSlashes(origPath: String): String = {
         def fixSlashesRec(path: List[Char]): List[Char] =
@@ -85,12 +76,79 @@ class File private () extends Serializable with Comparable[File] {
         }
         if(origPath == null) throw new NullPointerException()
         else fixSlashesRec(origPath.toList).mkString
+    }*/
+
+    private def fixSlashes(origPath: String): String = {
+        var uncIndex: Int = 1
+        var length: Int = origPath.length() 
+        var newLength: Int = 0
+        if (File.separatorChar == '/') {
+            uncIndex = 0;
+        } else if (length > 2 && origPath.charAt(1) == ':') {
+            uncIndex = 2;
+        }
+
+        var foundSlash: Boolean = false
+        var newPath: Array[Char] = origPath.toCharArray()
+        for(i <- 0 until length) {
+            var pathChar: Char = newPath(i)
+            if ((separatorChar == '\\' && pathChar == '\\')
+                || pathChar == '/') {
+                /* UNC Name requires 2 leading slashes */
+                if ((foundSlash && i == uncIndex) || !foundSlash) {
+                    newPath(newLength++) = separatorChar
+                    foundSlash = true
+                }
+            } else {
+                // check for leading slashes before a drive
+                if (pathChar == ':'
+                        && uncIndex > 0
+                        && (newLength == 2 || (newLength == 3 && newPath(1) == separatorChar))
+                        && newPath(0) == separatorChar) {
+                    newPath(0) = newPath(newLength - 1)
+                    newLength = 1
+                    // allow trailing slash after drive letter
+                    uncIndex = 2
+                }
+                newPath(newLength++) = pathChar
+                foundSlash = false
+            }
+        }
+        // remove trailing slash
+        if (foundSlash
+                && (newLength > (uncIndex + 1) || (newLength == 2 && newPath(0) != separatorChar))) {
+            newLength--
+        }
+
+        return new String(newPath, 0, newLength)
     }
 
-    def canRead(): Boolean = ???
+    def canRead(): Boolean = {
+        if (path.length() == 0) {
+            return false
+        }
+        val security: SecurityManager = System.getSecurityManager()
+        if (security != null) {
+            security.checkRead(path)
+        }
+        Array[Byte] pp = properPath(true)
+        return existsImpl(pp) && !isWriteOnlyImpl(pp)
+    }
 
-    def canWrite(): Boolean = ???
-    
+    def canWrite(): Boolean = {
+        val security: SecurityManager = System.getSecurityManager()
+        if (security != null) {
+            security.checkWrite(path)
+        }
+
+        // Cannot use exists() since that does an unwanted read-check.
+        var exists: Boolean = false
+        if (path.length() > 0) {
+            exists = existsImpl(properPath(true))
+        }
+        return exists && !isReadOnlyImpl(properPath(true))
+    }
+
     def delete(): Boolean = ???
 
     //native funct.
@@ -195,7 +253,9 @@ class File private () extends Serializable with Comparable[File] {
     def list(filter: FilenameFilter): Array[java.lang.String] = ???
 
     //native funct.
-    private /*synchronized*/ def listImpl(path: Array[Byte]): Array[Array[Byte]] = ???
+    private def listImpl(path: Array[Byte]): Array[Array[Byte]] = synchronized {
+        ???
+    }
 
     def mkdir(): Boolean = ???
 
@@ -210,7 +270,7 @@ class File private () extends Serializable with Comparable[File] {
     //native funct.
     private def newFileImpl(filePath: Array[Byte]): Int = ???
 
-    /*??? private*/ def properPath(interval: Boolean): Array[Byte] = ???
+    def properPath(interval: Boolean): Array[Byte] = ???
 
     def renameTo(des: java.io.File): Boolean = ???
 
@@ -219,19 +279,8 @@ class File private () extends Serializable with Comparable[File] {
 
     override def toString(): String = path
 
-    /*def toURI(): URI = ???
-
-    @throws(classOf[java.net.MalformedURLException])
-    def toURL(): URL = ???*/
 
     def getAbsoluteName(): String = ???
-
-    /*@throws(classOf[IOException])
-    private def writeObject(stream: ObjectOutputStream): Unit = ???
-
-    @throws(classOf[IOException])
-    @throws(classOf[ClassNotFoundException])
-    private def readObject(stream: ObjectInputStream): Unit = ???*/
 
 }
 
@@ -258,7 +307,7 @@ object File{
     private def rootsImpl(): List[CString] = {
 
         val HyMaxPath: Int = 1024
-        var rootString: Array[Char] = new Array[Char](HyMaxPath)
+        var rootString: Ptr[CChar] = new Array[Char](HyMaxPath)
         var rootCopy: Ptr[Char];
         
         /*those four lines are the implementation of
@@ -288,7 +337,7 @@ object File{
 
     def listRoots(): Array[File] = {
        val rootsList: List[CString] = rootsImpl()
-       //implementing rootsList as Option[...] to cotourn null test ?
+
        if(rootsList == null) new Array[File](0)
        else{
             var result: Array[File] = new Array[File](rootsList.length())
@@ -309,3 +358,26 @@ object File{
                         suffix: String,
                         directory: File): File = ???
 }
+
+//TODO:
+//private def checkURI(uri : URI): Unit
+
+/*@throws(classOf[IOException])
+private def writeObject(stream: ObjectOutputStream): Unit */
+
+/*@throws(classOf[IOException])
+@throws(classOf[ClassNotFoundException])
+private def readObject(stream: ObjectInputStream): Unit = ???*/
+
+//def toURI(): URI
+
+/*@throws(classOf[java.net.MalformedURLException])
+def toURL(): URL = ???*/
+
+/*def File(uri: URI): File = {
+    this()
+    checkURI(uri)
+    path = fixSlashes(uri.getPath())    
+}*/
+
+
