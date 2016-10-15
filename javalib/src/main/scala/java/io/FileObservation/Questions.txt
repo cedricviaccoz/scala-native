@@ -1,20 +1,13 @@
 Questions : 
 
--On File.java there is a lot of use of the java.net (for URL and URI) library, they are not ported in scala-native, shoud I: remove every function making use of it, keep them, or comment them in the wait of a future port of java.net ?
+-
+there is two implementation of the remove function 
+one in windows that seems almost impossible to implement in scala-native, found here :
+/classlib/modules/portlib/src/main/native/port/windows/hyfile.c
+and the other in unix system found here which is just a call to stdio remove(const char * path)
+/classlib/modules/portlib/src/main/native/port/unix/hyfile.c
 
--For what used to be final statics fields, would it be "smart" to put them the lazy modifier ? 
+for now, my project only use the unix implementation, but since I should try to have a cross platform version of java.io implemented, what do I do with windows ?
 
--is it a good idea to user functionnal programming to rewrite java functions, or would it be better to really stuck to the way the original Java code was written ?
-
--Is there a possibility to to get the pointer from an Array ? i.e. get the adress of the first element of the array (in C it would be:
-int array[12];
-int *ptr;
-ptr = &array[0] // or ptr = array )
-
--What to do with a synchronized native method ? There is no concurrency available at the moment on scala-native or is it ?
-
--How to correctly instantiate multiple constructor ?
-
--When using return types or more broadly, any type, should i use scala.Type ? (in reference of the signature of the return type left at compareTO)
-
-
+-
+there is no SecurityManager implemented in scala native is it ?
