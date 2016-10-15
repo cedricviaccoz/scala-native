@@ -151,19 +151,92 @@ class File private () extends Serializable with Comparable[File] {
         return exists && !isReadOnlyImpl(properPath(true))
     }
 
-    def delete(): Boolean = ???
+    def delete(): Boolean = {
+        //waiting for securityManager implementation.
+        /*val security: SecurityManager = System.getSecurityManager()
+        if (security != null) {
+            security.checkDelete(path)
+        }*/
+        var propPath: Array[Byte] = properPath(true)
+        if ((path.length() != 0) && isDirectoryImpl(propPath)) {
+            return deleteDirImpl(propPath)
+        }
+        else return deleteFileImpl(propPath);
+    }
 
     //native funct.
-    private def deleteDirImpl(filePath: Array[Byte]): Boolean = ???
+    @throws(classOf[PathTooLongIOException])
+    private def deleteDirImpl(filePath: Array[Byte]): Boolean = {
+        val HyMaxPath: Int = 1024
+        val length: Int = filePath.length
+        if(length > HyMaxPath-1){
+            throw new PathTooLongIOException(length)
+            return 0
+        }else{
+            var pathCopy: Ptr[CChar] = calloc(HyMaxPath, sizeof[CChar]).cast[Ptr[CChar]]
+            for(i <- 0 until length){
+                pathCopy(i) = filePath(i)
+            }
+            pathCopy(length) = '\0'
+
+            //according to apache, it is more difficult to achieve this
+            //on windows (cf libInvestigation... .md)
+            var result: Int = remove(pathCopy)
+            free(pathCopy)   
+            return result == 0
+        }
+    }
+
+    //C function utilized to remove the file.
+    @extern object unistd{
+        def unlink(path: CString): CInt = extern
+    }
 
     //native funct.
-    private def deleteFileImpl(filePath: Array[Byte]): Boolean = ???
+    private def deleteFileImpl(filePath: Array[Byte]): Boolean = {
+        val HyMaxPath: Int = 1024
+        val length: Int = filePath.length
+        if(length > HyMaxPath-1){
+            throw new PathTooLongIOException(length)
+            return 0
+        }else{
+            var pathCopy: Ptr[CChar] = calloc(HyMaxPath, sizeof[CChar]).cast[Ptr[CChar]]
+            for(i <- 0 until length){
+                pathCopy(i) = filePath(i)
+            }
+            pathCopy(length) = '\0'
+
+            //according to apache, it is more difficult to achieve this
+            //on windows (cf libInvestigation... .md)
+            var result: Int = unlink(pathCopy)
+            free(pathCopy)   
+            return result == 0
+        }
+    }
 
     def deleteOnExit(): Unit = ???
 
-    override def equals(obj: Any): Boolean = ???
+    override def equals(obj: Object): Boolean = {
+        if (!(obj instanceof File)) {
+            return false
+        }
+        if (!caseSensitive) {
+            return path.equalsIgnoreCase(((File) obj).getPath())
+        }
+        return path.equals(((File) obj).getPath())
+    }
 
-    def exists(): Boolean = ???
+    def exists(): Boolean = {
+        if (path.length() == 0) {
+            return false;
+        }
+        //waiting for SecurityManager 
+        /*var security: SecurityManager = System.getSecurityManager();
+        if (security != null) {
+            security.checkRead(path);
+        }*/
+        return existsImpl(properPath(true));
+    }
 
     //native funct.
     def existsImpl(filePath: Array[Byte]): Boolean = ???
@@ -306,6 +379,7 @@ object File{
         !System.getProperty("os.name").toLowerCase().contains("win")
     }
 
+    //REQUIRE TESTING !
     private def rootsImpl(): List[String] = {
 
         val HyMaxPath: Int = 1024
@@ -334,7 +408,7 @@ object File{
         return answer
     }
 
-
+    //REQUIRE TESTING !
     def listRoots(): Array[File] = {
        val rootsList: List[String] = rootsImpl()
 
