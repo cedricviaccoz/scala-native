@@ -2,6 +2,66 @@
 
 this document is kind of a personal journal of my investigation of the native code called by the library File.java, so I don't forget what each method does and what each macros means. 
 
+## native deleteDirImpl
+
+```
+JNIEXPORT jboolean JNICALL
+Java_java_io_File_deleteDirImpl (JNIEnv * env, jobject recv, jbyteArray path)
+{
+  PORT_ACCESS_FROM_ENV (env);
+  I_32 result;
+  jsize length = (*env)->GetArrayLength (env, path);
+  char pathCopy[HyMaxPath];
+  if (length > HyMaxPath-1) {
+    throwPathTooLongIOException(env, length);
+    return 0;
+  }
+  ((*env)->GetByteArrayRegion (env, path, 0, length, (jbyte *)pathCopy));
+  pathCopy[length] = '\0';
+  result = hyfile_unlinkdir (pathCopy);
+  return result == 0;
+}
+```
+
+### hyfile_unlinkdir(const car * path)
+* found in classlib/modules/portlib/src/main/native/include/shared/hyport.h though as a macro
+* but also in classlib/modules/portlib/src/main/native/port/unix/hyfile.c`
+* and windows version in /classlib/modules/portlib/src/main/native/port/windows/hyfile.c , by the way this one is pure hell : 
+```
+I_32 VMCALL
+hyfile_unlinkdir (struct HyPortLibrary * portLibrary, const char *path)
+{
+  wchar_t *pathW;
+  convert_path_to_unicode(portLibrary, path, &pathW);
+
+  /* should be able to delete read-only dirs, so we set the file attribute back to normal */
+  if (0 == SetFileAttributesW (pathW, FILE_ATTRIBUTE_NORMAL))
+    {
+      I_32 error = GetLastError ();
+      portLibrary->error_set_last_error (portLibrary, error, findError (error));	/* continue */
+    }
+
+  if (RemoveDirectoryW (pathW))
+    {
+      portLibrary->mem_free_memory(portLibrary, pathW);
+      return 0;
+    }
+  else
+    {
+      I_32 error = GetLastError ();
+      portLibrary->mem_free_memory(portLibrary, pathW);
+      portLibrary->error_set_last_error (portLibrary, error,
+					 findError (error));
+      return -1;
+    }
+}
+```
+
+### getByteArrayRegion(JNIEnv *env, ArrayType array, jsize start, jsize len, NativeType (ptr) buf)
+copies a region of a primitive array into a buffer
+
+
+
 ## native byte rootsImpl:
 ```
 JNIEXPORT jobject JNICALL
