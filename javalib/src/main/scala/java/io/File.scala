@@ -129,19 +129,21 @@ class File private () extends Serializable with Comparable[File] {
         if (path.length() == 0) {
             return false
         }
-        val security: SecurityManager = System.getSecurityManager()
+        //waiting for securityManager implementation
+        /*val security: SecurityManager = System.getSecurityManager()
         if (security != null) {
             security.checkRead(path)
-        }
+        }*/
         var pp: Array[Byte] = properPath(true)
         return existsImpl(pp) && !isWriteOnlyImpl(pp)
     }
 
     def canWrite(): Boolean = {
-        val security: SecurityManager = System.getSecurityManager()
+        //waiting for securityManager implentation
+        /*val security: SecurityManager = System.getSecurityManager()
         if (security != null) {
             security.checkWrite(path)
-        }
+        }*/
 
         // Cannot use exists() since that does an unwanted read-check.
         var exists: Boolean = false
@@ -165,20 +167,15 @@ class File private () extends Serializable with Comparable[File] {
     }
 
     //native funct.
-    @throws(classOf[PathTooLongIOException])
+    @throws(classOf[IOException])
     private def deleteDirImpl(filePath: Array[Byte]): Boolean = {
         val HyMaxPath: Int = 1024
         val length: Int = filePath.length
-        if(length > HyMaxPath-1){
-            throw new PathTooLongIOException(length)
-            return 0
+        if(length > (HyMaxPath-1)){
+            throw new IOException("too long path")
         }else{
             var pathCopy: Ptr[CChar] = calloc(HyMaxPath, sizeof[CChar]).cast[Ptr[CChar]]
-            for(i <- 0 until length){
-                pathCopy(i) = filePath(i)
-            }
-            pathCopy(length) = '\0'
-
+            filePathCopy(filePath, length, pathCopy)
             //according to apache, it is more difficult to achieve this
             //on windows (cf libInvestigation... .md)
             var result: Int = remove(pathCopy)
@@ -193,37 +190,49 @@ class File private () extends Serializable with Comparable[File] {
     }
 
     //native funct.
+    @throws(classOf[IOException])
     private def deleteFileImpl(filePath: Array[Byte]): Boolean = {
         val HyMaxPath: Int = 1024
         val length: Int = filePath.length
-        if(length > HyMaxPath-1){
-            throw new PathTooLongIOException(length)
-            return 0
+        if(length > (HyMaxPath-1)){
+            //PathTooLongIOException don't exist, so I'm doing it myself
+            throw new IOException("too long path")
         }else{
             var pathCopy: Ptr[CChar] = calloc(HyMaxPath, sizeof[CChar]).cast[Ptr[CChar]]
-            for(i <- 0 until length){
-                pathCopy(i) = filePath(i)
-            }
-            pathCopy(length) = '\0'
-
+            filePathCopy(filePath, length, pathCopy)
             //according to apache, it is more difficult to achieve this
             //on windows (cf libInvestigation... .md)
-            var result: Int = unlink(pathCopy)
+            var result: Int = unistd.unlink(pathCopy)
             free(pathCopy)   
             return result == 0
         }
     }
 
+    /*
+     *Small utilitary function to achieve modularity
+     *transform an Array of Byte into a CString, and 
+     *add the null terminating char at the end.
+     */
+    private def filePathCopy(filePath: Array[Byte], 
+                             length: Int, 
+                             pathCopy: CString): Unit = {
+        for(i <- 0 until length){
+                pathCopy(i) = filePath(i)
+            }
+            pathCopy(length) = '\0'
+    }
+
     def deleteOnExit(): Unit = ???
 
-    override def equals(obj: Object): Boolean = {
-        if (!(obj instanceof File)) {
+    
+    override def equals(obj: Any): Boolean = {
+        if (!(obj.isInstanceOf[File])) {
             return false
         }
         if (!caseSensitive) {
-            return path.equalsIgnoreCase(((File) obj).getPath())
+            return path.equalsIgnoreCase((obj.asInstanceOf[File]).getPath())
         }
-        return path.equals(((File) obj).getPath())
+        return path.equals((obj.asInstanceOf[File]).getPath())
     }
 
     def exists(): Boolean = {
