@@ -78,11 +78,12 @@ class File private () extends Serializable with Comparable[File] {
         else fixSlashesRec(origPath.toList).mkString
     }*/
 
+    //TODO: Track down bug and remove it.
     private def fixSlashes(origPath: String): String = {
         var uncIndex: Int = 1
         var length: Int = origPath.length() 
         var newLength: Int = 0
-        if (File.separatorChar == '/') {
+        if (separatorChar == '/') {
             uncIndex = 0;
         } else if (length > 2 && origPath.charAt(1) == ':') {
             uncIndex = 2;
@@ -92,20 +93,20 @@ class File private () extends Serializable with Comparable[File] {
         var newPath: Array[Char] = origPath.toCharArray()
         for(i <- 0 until length) {
             var pathChar: Char = newPath(i)
-            if ((separatorChar == '\\' && pathChar == '\\')
-                || pathChar == '/') {
+            if ((separatorChar == '\\') && (pathChar == '\\')
+                || (pathChar == '/')) {
                 /* UNC Name requires 2 leading slashes */
-                if ((foundSlash && i == uncIndex) || !foundSlash) {
+                if ((foundSlash && (i == uncIndex)) || !foundSlash) {
                     newLength += 1
                     newPath(newLength) = separatorChar
                     foundSlash = true
                 }
             } else {
                 // check for leading slashes before a drive
-                if (pathChar == ':'
-                        && uncIndex > 0
-                        && (newLength == 2 || (newLength == 3 && newPath(1) == separatorChar))
-                        && newPath(0) == separatorChar) {
+                if ((pathChar == ':')
+                        && (uncIndex > 0)
+                        && ((newLength == 2) || ((newLength == 3) && (newPath(1) == separatorChar)))
+                        && (newPath(0) == separatorChar)) {
                     newPath(0) = newPath(newLength - 1)
                     newLength = 1
                     // allow trailing slash after drive letter
@@ -121,7 +122,6 @@ class File private () extends Serializable with Comparable[File] {
                 && (newLength > (uncIndex + 1) || (newLength == 2 && newPath(0) != separatorChar))) {
             newLength -= 1
         }
-
         return new String(newPath, 0, newLength)
     }
 
@@ -129,22 +129,11 @@ class File private () extends Serializable with Comparable[File] {
         if (path.length() == 0) {
             return false
         }
-        //waiting for securityManager implementation
-        /*val security: SecurityManager = System.getSecurityManager()
-        if (security != null) {
-            security.checkRead(path)
-        }*/
         var pp: Array[Byte] = properPath(true)
         return existsImpl(pp) && !isWriteOnlyImpl(pp)
     }
 
     def canWrite(): Boolean = {
-        //waiting for securityManager implentation
-        /*val security: SecurityManager = System.getSecurityManager()
-        if (security != null) {
-            security.checkWrite(path)
-        }*/
-
         // Cannot use exists() since that does an unwanted read-check.
         var exists: Boolean = false
         if (path.length() > 0) {
@@ -154,11 +143,6 @@ class File private () extends Serializable with Comparable[File] {
     }
 
     def delete(): Boolean = {
-        //waiting for securityManager implementation.
-        /*val security: SecurityManager = System.getSecurityManager()
-        if (security != null) {
-            security.checkDelete(path)
-        }*/
         var propPath: Array[Byte] = properPath(true)
         if ((path.length() != 0) && isDirectoryImpl(propPath)) {
             return deleteDirImpl(propPath)
@@ -169,17 +153,15 @@ class File private () extends Serializable with Comparable[File] {
     //native funct.
     @throws(classOf[IOException])
     private def deleteDirImpl(filePath: Array[Byte]): Boolean = {
-        val HyMaxPath: Int = 1024
         val length: Int = filePath.length
         if(length > (HyMaxPath-1)){
             throw new IOException("too long path")
         }else{
-            var pathCopy: Ptr[CChar] = calloc(HyMaxPath, sizeof[CChar]).cast[Ptr[CChar]]
+            var pathCopy: Ptr[CChar] = stackalloc[CChar](HyMaxPath)
             filePathCopy(filePath, length, pathCopy)
             //according to apache, it is more difficult to achieve this
             //on windows (cf libInvestigation... .md)
             var result: Int = remove(pathCopy)
-            free(pathCopy)   
             return result == 0
         }
     }
@@ -192,18 +174,16 @@ class File private () extends Serializable with Comparable[File] {
     //native funct.
     @throws(classOf[IOException])
     private def deleteFileImpl(filePath: Array[Byte]): Boolean = {
-        val HyMaxPath: Int = 1024
         val length: Int = filePath.length
         if(length > (HyMaxPath-1)){
             //PathTooLongIOException don't exist, so I'm doing it myself
             throw new IOException("too long path")
         }else{
-            var pathCopy: Ptr[CChar] = calloc(HyMaxPath, sizeof[CChar]).cast[Ptr[CChar]]
+            var pathCopy: Ptr[CChar] = stackalloc[CChar](HyMaxPath)
             filePathCopy(filePath, length, pathCopy)
             //according to apache, it is more difficult to achieve this
             //on windows (cf libInvestigation... .md)
-            var result: Int = unistd.unlink(pathCopy)
-            free(pathCopy)   
+            var result: Int = unistd.unlink(pathCopy)   
             return result == 0
         }
     }
@@ -221,6 +201,7 @@ class File private () extends Serializable with Comparable[File] {
             }
             pathCopy(length) = '\0'
     }
+
 
     def deleteOnExit(): Unit = ???
 
@@ -373,6 +354,7 @@ object File{
 
     /*need to determine If I need an implementation of this C funct.*/
     //oneTimeInitialization();
+    val HyMaxPath: Int = 1024
 	val separatorChar: Char = System.getProperty("file.separator", "\\")(0);
 	val pathSeparatorChar: Char = System.getProperty("path.separator", ";")(0);
     val separator: String = separatorChar.toString
@@ -391,8 +373,7 @@ object File{
     //REQUIRE TESTING !
     private def rootsImpl(): List[String] = {
 
-        val HyMaxPath: Int = 1024
-        var rootsString: Ptr[Byte] = malloc(HyMaxPath*sizeof[Byte]).cast[Ptr[Byte]]
+        var rootsString: Ptr[Byte] = stackalloc[Byte](HyMaxPath)
         
         /*those four lines are the implementation of
         the original platformRoots, it seems though to 
@@ -406,14 +387,12 @@ object File{
         
         var entrylen: CSize = strlen(rootCopy)
         while(entrylen != 0){
-            var rootname: Ptr[Byte] = malloc(entrylen*sizeof[Byte]).cast[Ptr[Byte]]
+            var rootname: Ptr[Byte] = stackalloc[Byte](entrylen)
             strncpy(rootname, rootCopy, entrylen)
             answer.::(fromCString(rootname)) 
-            free(rootname)
             rootCopy = rootCopy + entrylen + 1
             entrylen = strlen(rootCopy)
         }
-        free(rootsString)
         return answer
     }
 
@@ -463,5 +442,3 @@ def toURL(): URL = ???*/
     checkURI(uri)
     path = fixSlashes(uri.getPath())    
 }*/
-
-
