@@ -2,6 +2,62 @@
 
 this document is kind of a personal journal of my investigation of the native code called by the library File.java, so I don't forget what each method does and what each macros means. 
 
+## native existsImpl
+```
+JNIEXPORT jboolean JNICALL
+Java_java_io_File_existsImpl (JNIEnv * env, jobject recv, jbyteArray path)
+{
+  PORT_ACCESS_FROM_ENV (env);
+  I_32 result;
+  char pathCopy[HyMaxPath];
+  jsize length = (*env)->GetArrayLength (env, path);
+  if (length > HyMaxPath-1) {
+    throwPathTooLongIOException(env, length);
+    return 0;
+  }
+  ((*env)->GetByteArrayRegion (env, path, 0, length, (jbyte *)pathCopy));
+  pathCopy[length] = '\0';
+  result = hyfile_attr (pathCopy);
+  return result >= 0;
+}
+```
+
+### hyfile_attr(pathCopy)
+```
+/**
+ * Determine whether path is a file or directory.
+ *
+ * @param[in] portLibrary The port library
+ * @param[in] path file/path name being queried.
+ *
+ * @return HyIsFile if a file, HyIsDir if a directory, negative portable error code on failure.
+ */
+I_32 VMCALL
+hyfile_attr (struct HyPortLibrary *portLibrary, const char *path)
+{
+  struct stat buffer;
+
+  /* Neutrino does not handle NULL for stat */
+
+  if (stat (path, &buffer))
+    {
+      return portLibrary->error_set_last_error (portLibrary, errno,
+                                                findError (errno));
+    }
+  if (S_ISDIR (buffer.st_mode))
+    {
+      return HyIsDir;
+    }
+  return HyIsFile;
+}
+```
+#### struct stat buffer;
+This as well as the function stat  can be accessed on the clibrary ```sys/types.h 
+sys/stat.h 
+unistd.h```
+
+
+
 ## native deleteDirImpl
 
 ```
