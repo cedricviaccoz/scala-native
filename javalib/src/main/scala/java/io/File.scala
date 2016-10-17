@@ -347,10 +347,10 @@ class File private () extends Serializable with Comparable[File] {
 
     //c file can be found in scala-native/nativelib/src/main/resources/
 @extern object CFile{
-    @inline def separatorChar() = extern
-    @inline def pathSeparatorChar() = extern
-    @inline def isCaseSensitiveImpl() = extern
-    @inline def getPlatformRoots(rootStrings: Ptr[CChar]) = extern
+    def separatorChar() = extern
+    def pathSeparatorChar() = extern
+    def isCaseSensitiveImpl(): Int = extern
+    def getPlatformRoots(rootStrings: Ptr[CChar]) = extern
     def file_attr(path: CString): Int = extern
 }
 
