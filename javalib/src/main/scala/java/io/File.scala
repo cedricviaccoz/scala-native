@@ -150,46 +150,40 @@ class File private () extends Serializable with Comparable[File] {
 
     //native funct.
     @throws(classOf[IOException])
-    private def deleteDirImpl(filePath: Array[Byte]): Boolean = {
-        val length: Int = filePath.length
-        if(length > (HyMaxPath-1)){
-            throw new IOException("too long path")
-        }else{
-
-            var pathCopy: Ptr[CChar] = stackalloc[CChar](HyMaxPath)
-            filePathCopy(filePath, length, pathCopy)
-            var result: Int = remove(pathCopy)
-            return result == 0
-        }
+    private def deleteDirImpl(filePath: Array[Byte]): Boolean = {filePathCopy(filePath)
+        var pathCopy: CString = filePathCopy(filePath)
+        val result: Int = remove(pathCopy)
+        return result == 0
     }
 
     //native funct.
     @throws(classOf[IOException])
     private def deleteFileImpl(filePath: Array[Byte]): Boolean = {
-        val length: Int = filePath.length
-        if(length > (HyMaxPath-1)){
-            //PathTooLongIOException don't exist, so I'm doing it myself
-            throw new IOException("too long path")
-        }else{
-            var pathCopy: Ptr[CChar] = stackalloc[CChar](HyMaxPath)
-            filePathCopy(filePath, length, pathCopy)
-            var result: Int = unistd.unlink(pathCopy)   
-            return result == 0
-        }
+        var pathCopy: CString = filePathCopy(filePath)
+        var result: Int = unistd.unlink(pathCopy)   
+        return result == 0
     }
 
     /*
      *Small utilitary function to achieve modularity
-     *transform an Array of Byte into a CString, and 
+     *transform an Array of Byte to a CString 
      *add the null terminating char at the end.
+     * can throw an IO exception if the path is too long
      */
-    private def filePathCopy(filePath: Array[Byte], 
-                             length: Int, 
-                             pathCopy: CString): Unit = {
-        for(i <- 0 until length){
-                pathCopy(i) = filePath(i)
-            }
-            pathCopy(length) = '\0'
+    @throws(classOf[IOException])
+    private def filePathCopy(filePath: Array[Byte]): CString = {
+        var pathCopy: CString = stackalloc[CChar](HyMaxPath)
+        val length = filePath.length()
+        if(length > (HyMaxPath-1)){
+            //PathTooLongIOException don't exist, so I'm doing it myself
+            throw new IOException("too long path")
+        }else{  
+            for(i <- 0 until length){
+                    pathCopy(i) = filePath(i)
+                }
+            pathCopy(length) = '\0'   
+            return pathCopy
+        }
     }
 
 
@@ -215,14 +209,7 @@ class File private () extends Serializable with Comparable[File] {
 
     //native funct.
     def existsImpl(filePath: Array[Byte]): Boolean = {
-        var pathCopy: CString = stackalloc[CChar](HyMaxPath)
-        val length: Int = filePath.length
-        if(length > HyMaxPath-1){
-            throw new IOException("too long path")
-            return false
-        }
-        filePathCopy(filePath, length, pathCopy)
-        
+        var pathCopy: CString = filePathCopy(filePath)
         return (CFile.file_attr(pathCopy) >= 0)
     }
 
@@ -325,10 +312,27 @@ class File private () extends Serializable with Comparable[File] {
     def mkdirs(): Boolean = ???
 
     @throws(classOf[IOException])
-    def createNewFile(): Boolean = ???
+    def createNewFile(): Boolean = {
+        if(path.length( == 0)){
+            //corresponds to the entry "luni.B3" of the
+            //internal Messages module from apache. 
+            throw new IOException("No such file or directory")   
+        }
+        newFileImpl(properPath(true)) match{
+            case 0 => true
+            case 1 => false
+            //corresponds to the entry "luni.B4" of the
+            //internal Messages module from apache.
+            case _ => throw new IOException("Cannot create\:"+ path)
+        }
+    }
 
     //native funct.
-    private def newFileImpl(filePath: Array[Byte]): Int = ???
+    private def newFileImpl(filePath: Array[Byte]): Int = {
+        var pathCopy = filePathCopy(filePath)
+        
+
+    }
 
     def properPath(interval: Boolean): Array[Byte] = ???
 
@@ -347,8 +351,8 @@ class File private () extends Serializable with Comparable[File] {
 
     //c file can be found in scala-native/nativelib/src/main/resources/
 @extern object CFile{
-    def separatorChar() = extern
-    def pathSeparatorChar() = extern
+    def separatorChar(): Char = extern
+    def pathSeparatorChar(): Char = extern
     def isCaseSensitiveImpl(): Int = extern
     def getPlatformRoots(rootStrings: Ptr[CChar]) = extern
     def file_attr(path: CString): Int = extern
