@@ -1,42 +1,9 @@
-object ExceptionHandling {
-  class A extends Exception
-  class B extends Exception
-  class C extends Exception
+import scalanative.native._, stdlib._, stdio._
 
-  def throwA() = throw new A
-  def throwB() = throw new B
-  def throwC() = throw new C
-
+object Test {
   def main(args: Array[String]): Unit = {
-    test1()
-    test2()
-    test3()
-  }
-
-  def test1() = assert {
-    try {
-      try throwB()
-      catch {
-        case a: A => false
-      }
-    } catch {
-      case b: B => true
-    }
-  }
-
-  def test2() = assert {
-    try throwA()
-    catch {
-      case a: A => true
-      case b: B => false
-    }
-  }
-
-  def test3() = assert {
-    try throwB()
-    catch {
-      case a: A => false
-      case b: B => true
-    }
+    val W = 800
+    val H = 600
+    fprintf(stdout, c"P3\n%d %d\n%d\n", W, H, 255)
   }
 }
