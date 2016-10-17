@@ -6,7 +6,6 @@ import scalanative.native._, stdlib._, stdio._, string._
 class File private () extends Serializable with Comparable[File] {
     import File._
   	
-
     private var path: String =_
 
     def compareTo(file: File): Int = {
@@ -78,7 +77,6 @@ class File private () extends Serializable with Comparable[File] {
         else fixSlashesRec(origPath.toList).mkString
     }*/
 
-    //TODO: Track down bug and remove it.
     private def fixSlashes(origPath: String): String = {
         var uncIndex: Int = 1
         var length: Int = origPath.length() 
@@ -157,18 +155,12 @@ class File private () extends Serializable with Comparable[File] {
         if(length > (HyMaxPath-1)){
             throw new IOException("too long path")
         }else{
+
             var pathCopy: Ptr[CChar] = stackalloc[CChar](HyMaxPath)
             filePathCopy(filePath, length, pathCopy)
-            //according to apache, it is more difficult to achieve this
-            //on windows (cf libInvestigation... .md)
             var result: Int = remove(pathCopy)
             return result == 0
         }
-    }
-
-    //C function utilized to remove the file.
-    @extern object unistd{
-        def unlink(path: CString): CInt = extern
     }
 
     //native funct.
@@ -181,8 +173,6 @@ class File private () extends Serializable with Comparable[File] {
         }else{
             var pathCopy: Ptr[CChar] = stackalloc[CChar](HyMaxPath)
             filePathCopy(filePath, length, pathCopy)
-            //according to apache, it is more difficult to achieve this
-            //on windows (cf libInvestigation... .md)
             var result: Int = unistd.unlink(pathCopy)   
             return result == 0
         }
@@ -220,16 +210,21 @@ class File private () extends Serializable with Comparable[File] {
         if (path.length() == 0) {
             return false;
         }
-        //waiting for SecurityManager 
-        /*var security: SecurityManager = System.getSecurityManager();
-        if (security != null) {
-            security.checkRead(path);
-        }*/
         return existsImpl(properPath(true));
     }
 
     //native funct.
-    def existsImpl(filePath: Array[Byte]): Boolean = ???
+    def existsImpl(filePath: Array[Byte]): Boolean = {
+        var pathCopy: CString = stackalloc[CChar](HyMaxPath)
+        val length: Int = filePath.length
+        if(length > HyMaxPath-1){
+            throw new IOException("too long path")
+            return false
+        }
+        filePathCopy(filePath, length, pathCopy)
+        
+        return (CFile.file_attr(pathCopy) >= 0)
+    }
 
     def getAbsolutePath(): String = ???
 
@@ -350,46 +345,57 @@ class File private () extends Serializable with Comparable[File] {
 }
 
 
+    //c file can be found in scala-native/nativelib/src/main/resources/
+@extern object CFile{
+    @inline def separatorChar() = extern
+    @inline def pathSeparatorChar() = extern
+    @inline def isCaseSensitiveImpl() = extern
+    @inline def getPlatformRoots(rootStrings: Ptr[CChar]) = extern
+    def file_attr(path: CString): Int = extern
+}
+
+    //C function utilized to remove the file.
+@extern object unistd{
+    def unlink(path: CString): CInt = extern
+}
+
+
 object File{
+
 
     /*need to determine If I need an implementation of this C funct.*/
     //oneTimeInitialization();
+
+    //HyMaxPath was chosen from unix MAXPATHLEN.
     val HyMaxPath: Int = 1024
-	val separatorChar: Char = System.getProperty("file.separator", "\\")(0);
-	val pathSeparatorChar: Char = System.getProperty("path.separator", ";")(0);
+	val separatorChar: Char = CFile.separatorChar()
+	val pathSeparatorChar: Char = CFile.pathSeparatorChar()
     val separator: String = separatorChar.toString
 	val pathSeparator: String = pathSeparatorChar.toString
 	private var counter: Int = 0;
 	private var counterBase: Int = 0;
 	private class TempFileLocker{}
 	private val tempFileLocker: TempFileLocker = new TempFileLocker()
-	private var caseSensitive: Boolean = isCaseSensitiveImpl();
+	private val caseSensitive: Boolean = (CFile.isCaseSensitiveImpl() == 1);
 
-    //according to apache, only Windows systems are case insensitive
-    private def isCaseSensitiveImpl(): Boolean = {
-        !System.getProperty("os.name").toLowerCase().contains("win")
-    }
-
-    //REQUIRE TESTING !
-    private def rootsImpl(): List[String] = {
+    private def rootsImpl(): Array[String] = {
 
         var rootsString: Ptr[Byte] = stackalloc[Byte](HyMaxPath)
-        
-        /*those four lines are the implementation of
-        the original platformRoots, it seems though to 
-        only work for unix system....*/ 
-        rootsString(0) = '/'
-        rootsString(1) = 0
-        rootsString(2) = 0
-
+        val numRoots: Int = CFile.getPlatformRoots(rootsString)
+        if(numRoots == 0){
+            return null
+        }
         var rootCopy: Ptr[Byte] = rootsString
-        val answer: List[String] = List()
+
+        val answer: Array[String] = new Array[String](numRoots)
         
         var entrylen: CSize = strlen(rootCopy)
+        var index: Int = 0
         while(entrylen != 0){
-            var rootname: Ptr[Byte] = stackalloc[Byte](entrylen)
+            var rootname: Ptr[Byte] = stackalloc[Byte](entrylen.toInt)
             strncpy(rootname, rootCopy, entrylen)
-            answer.::(fromCString(rootname)) 
+            answer(index) = fromCString(rootname)
+            index += 1
             rootCopy = rootCopy + entrylen + 1
             entrylen = strlen(rootCopy)
         }
@@ -398,14 +404,10 @@ object File{
 
     //REQUIRE TESTING !
     def listRoots(): Array[File] = {
-       val rootsList: List[String] = rootsImpl()
+       val rootsList: Array[String] = rootsImpl()
 
        if(rootsList == null) new Array[File](0)
-       else{
-            var result: Array[File] = new Array[File](rootsList.length)
-            val l = for(roots <- rootsList) yield new File(roots.toString())  
-            l.toArray        
-       }
+       else for(roots <- rootsList) yield new File(roots.toString())      
     }
 
     @throws(classOf[IOException])
