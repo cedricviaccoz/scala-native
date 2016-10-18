@@ -186,8 +186,8 @@ class File private () extends Serializable with Comparable[File] {
         }
     }
 
-
-    def deleteOnExit(): Unit = ???
+    //deleteOnExit schedule a
+    def deleteOnExit(): Unit = delete()
 
     
     override def equals(obj: Any): Boolean = {
@@ -215,7 +215,7 @@ class File private () extends Serializable with Comparable[File] {
 
     def getAbsolutePath(): String = ???
 
-    def getAbsoluteFile(): File = ???
+    def getAbsoluteFile(): File = new File(this.getAbsolutePath())
 
     @throws(classOf[IOException])
     def getCannonicalPath(): String = ???
@@ -330,11 +330,60 @@ class File private () extends Serializable with Comparable[File] {
     //native funct.
     private def newFileImpl(filePath: Array[Byte]): Int = {
         var pathCopy = filePathCopy(filePath)
-        
-
+        ???
     }
 
-    def properPath(interval: Boolean): Array[Byte] = ???
+    def properPath(internal: Boolean): Array[Byte] = {
+        if (properPath != null) {
+            return properPath;
+        }
+
+        if (isAbsolute()) {
+//FIXME
+            var pathBytes: Array[Byte] = Util.getUTF8Bytes(path);
+            return properPath = pathBytes;
+        }
+        // Check security by getting user.dir when the path is not absolute
+        var userdir: String;
+        if (internal) {
+//FIXME
+            userdir = AccessController.doPrivileged(new PriviAction<String>(
+                    "user.dir")); //$NON-NLS-1$
+        } else {
+//FIXME
+            userdir = System.getProperty("user.dir"); //$NON-NLS-1$
+        }
+
+        if (path.length() == 0) {
+//FIXME
+            return properPath = Util.getUTF8Bytes(userdir);
+        }
+        var length: Int = userdir.length();
+
+        // Handle windows-like path
+        if (path(0) == '\\') {
+            if (length > 1 && userdir.charAt(1) == ':') {
+//FIXME
+                return properPath = Util.getUTF8Bytes(userdir.substring(0, 2)
+                        + path);
+            }
+            path = path.substring(1);
+        }
+
+        // Handle separator
+        var result: String = userdir;
+        if (userdir(length - 1) != separatorChar) {
+            if (path(0) != separatorChar) {
+                result += separator;
+            }
+        } else if (path(0) == separatorChar) {
+            result = result.substring(0, length - 2);
+
+        }
+        result += path;
+//FIXME
+        return properPath = Util.getUTF8Bytes(result);
+    }
 
     def renameTo(des: java.io.File): Boolean = ???
 
@@ -342,7 +391,6 @@ class File private () extends Serializable with Comparable[File] {
     private def renameToImpl(pathExists: Array[Byte], pathNew: Array[Byte]): Boolean = ???
 
     override def toString(): String = path
-
 
     def getAbsoluteName(): String = ???
 
