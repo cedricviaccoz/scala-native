@@ -2,6 +2,102 @@
 
 this document is kind of a personal journal of my investigation of the native code called by the library File.java, so I don't forget what each method does and what each macros means. 
 
+## native newFileImpl
+```
+JNIEXPORT jint JNICALL
+Java_java_io_File_newFileImpl (JNIEnv * env, jobject recv, jbyteArray path)
+{
+  PORT_ACCESS_FROM_ENV (env);
+  IDATA portFD;
+  jsize length = (*env)->GetArrayLength (env, path);
+  char pathCopy[HyMaxPath];
+  if (length > HyMaxPath-1) {
+    throwPathTooLongIOException(env, length);
+    return 0;
+  }
+  ((*env)->GetByteArrayRegion (env, path, 0, length, (jbyte *)pathCopy));
+  pathCopy[length] = '\0';
+
+  /* Now create the file and close it */
+  portFD = hyfile_open (pathCopy,
+                        HyOpenCreateNew | HyOpenWrite | HyOpenTruncate,
+                        0666);
+  
+  if (portFD == -1) {
+    if (hyerror_last_error_number() == HYPORT_ERROR_FILE_EXIST) {
+      return 1;
+    }
+    return 2;
+  }
+  hyfile_close (portFD);
+  return 0;
+}
+```
+
+### hyfile_open
+```
+/**
+ * Convert a pathname into a file descriptor.
+ *
+ * @param[in] portLibrary The port library
+ * @param[in] path Name of the file to be opened.
+ * @param[in] flags Portable file read/write attributes.
+ * @param[in] mode Platform file permissions.
+ *
+ * @return The file descriptor of the newly opened file, -1 on failure.
+ */
+IDATA VMCALL
+hyfile_open (struct HyPortLibrary *portLibrary, const char *path, I_32 flags,
+             I_32 mode)
+{
+  struct stat buffer;
+  I_32 fd;
+  I_32 realFlags = EsTranslateOpenFlags (flags);
+  I_32 fdflags;
+
+  Trc_PRT_file_open_Entry (path, flags, mode);
+
+  if (realFlags == -1)
+    {
+      Trc_PRT_file_open_Exit1 (flags);
+      portLibrary->error_set_last_error (portLibrary, EINVAL,
+                                         findError (EINVAL));
+      return -1;
+    }
+
+  if ( ( flags&HyOpenRead && !(flags&HyOpenWrite) )  && !stat (path, &buffer))
+    {
+      if (S_ISDIR (buffer.st_mode))
+        {
+          portLibrary->error_set_last_error_with_message (portLibrary,
+                                                          findError (EEXIST),
+                                                          "Is a directory");
+          Trc_PRT_file_open_Exit4 ();
+          return -1;
+        }
+    }
+
+  fd = open (path, realFlags, mode);
+
+  if (-1 == fd)
+    {
+      Trc_PRT_file_open_Exit2 (errno, findError (errno));
+      portLibrary->error_set_last_error (portLibrary, errno,
+                                         findError (errno));
+      return -1;
+    }
+
+  /* Tag this descriptor as being non-inheritable */
+  fdflags = fcntl (fd, F_GETFD, 0);
+  fcntl (fd, F_SETFD, fdflags | FD_CLOEXEC);
+
+  fd += FD_BIAS;
+  Trc_PRT_file_open_Exit (fd);
+  return (IDATA) fd;
+}
+```
+
+
 ## native existsImpl
 ```
 JNIEXPORT jboolean JNICALL

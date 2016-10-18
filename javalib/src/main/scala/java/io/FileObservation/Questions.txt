@@ -1,16 +1,4 @@
 Questions : 
 
 -
-there is two implementation of the remove function 
-one in windows that seems almost impossible to implement in scala-native, found here :
-/classlib/modules/portlib/src/main/native/port/windows/hyfile.c
-and the other in unix system found here which is just a call to stdio remove(const char * path)
-/classlib/modules/portlib/src/main/native/port/unix/hyfile.c
-
-for now, my project only use the unix implementation, but since I should try to have a cross platform version of java.io implemented, what do I do with windows ?
-
--
-there is no SecurityManager implemented in scala native is it ?
-
--
-Where can i have my file.cpp to put it C functions i want to use ?
+There is deleteOnExit() which is a function that schedule a delete of the file once the JVM terminates, for now my implementation just casually calls delete, should I do something else ?
