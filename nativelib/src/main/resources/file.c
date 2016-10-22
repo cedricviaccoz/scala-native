@@ -1,32 +1,38 @@
+#include <stdio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <locale.h>
+#include <langinfo.h>
+#include <limits.h>
 
 //values chosen accordingly to the corresponding HyIsFile and HyIsDir in harmony
 #define isDir 0 
 #define isFile 1
 
+//#define TEST
+
 char separatorChar(){
 #ifdef _WIN32
-	return '\\';
+  return '\\';
 #else
-	return '/';
+  return '/';
 #endif
 }
 
 char pathSeparatorChar(){
 #ifdef _WIN32
-	return ';';
+  return ';';
 #else
-	return ':';
+  return ':';
 #endif
 }
 
 int isCaseSensitiveImpl(){
 #ifdef _WIN32
-	return 0;
+  return 0;
 #else
-	return 1;
+  return 1;
 #endif
 }
 
@@ -53,3 +59,27 @@ int file_attr(const char *path)
     }
   return isFile;
 }
+
+const char * getOsEncoding(){
+  setlocale(LC_ALL, "");
+  return nl_langinfo(CODESET);
+}
+
+//FIXME
+const char * getUserDir(){
+    char buff[PATH_MAX] = "";
+    char * res = getcwd(buff, PATH_MAX-1);
+    if(res != NULL){
+      return res;
+    }else{
+      fprintf(stderr, "getcwd() error");
+    }
+}
+
+#ifdef TEST
+int main(void){
+  printf("OS encoding is %s\n", getOsEncoding());
+  printf("UserDir is %s\n", getUserDir());
+  return 0;
+}
+#endif
