@@ -65,7 +65,6 @@ const char * getOsEncoding(){
   return nl_langinfo(CODESET);
 }
 
-//FIXME
 const char * getUserDir(){
     char buff[PATH_MAX] = "";
     char * res = getcwd(buff, PATH_MAX-1);
