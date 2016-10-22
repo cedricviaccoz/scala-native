@@ -191,11 +191,11 @@ class File private () extends Serializable with Comparable[File] {
         var propPath: Array[Byte] = properPath(true)
         if ((path.length() != 0) && isDirectoryImpl(propPath)) {
             atexit{
-                remove(filePathCopy(filePath))
+                remove(filePathCopy(propPath))
             }
         }
         else atexit{
-            unistd.unlink(filePathCopy(filePath))
+            unistd.unlink(filePathCopy(propPath))
         }    
     }
 
@@ -349,8 +349,9 @@ class File private () extends Serializable with Comparable[File] {
         }
 
         if (isAbsolute()) {
-            var pathBytes: Array[Byte] = Util.getUTF8Bytes(path);
-            return properPath = pathBytes;
+            var pathBytes: Array[Byte] = HyUtil.getUTF8Bytes(path);
+            properPath = pathBytes;
+            return properPath
         }
         // Check security by getting user.dir when the path is not absolute
         var userdir: String;
@@ -359,19 +360,20 @@ class File private () extends Serializable with Comparable[File] {
             userdir = AccessController.doPrivileged(new PriviAction[String](
                     "user.dir")); //$NON-NLS-1$
         } else {
-            userdir = CFile.getUserDir();      
+            userdir = fromCString(CFile.getUserDir())     
         }
 
         if (path.length() == 0) {
-            return properPath = Util.getUTF8Bytes(userdir);
+            properPath = HyUtil.getUTF8Bytes(userdir);
+            return properPath
         }
         var length: Int = userdir.length();
 
         // Handle windows-like path
         if (path(0) == '\\') {
             if (length > 1 && userdir(1) == ':') {
-                return properPath = Util.getUTF8Bytes(userdir.substring(0, 2)
-                        + path);
+                properPath = HyUtil.getUTF8Bytes(userdir.substring(0, 2) + path);
+                return properPath
             }
             path = path.substring(1);
         }
@@ -387,7 +389,8 @@ class File private () extends Serializable with Comparable[File] {
 
         }
         result += path;
-        return properPath = Util.getUTF8Bytes(result);
+        properPath = HyUtil.getUTF8Bytes(result)
+        return properPath
     }
 
     def renameTo(des: java.io.File): Boolean = ???
@@ -486,7 +489,7 @@ object File{
 
 //Implementation of the few used methods from 
 // org.hapache
-object Util{
+object HyUtil{
     private val defaultEncoding: String = fromCString(CFile.getOsEncoding())
     def getBytes(name: String): Array[Byte] = name.getBytes(defaultEncoding)
     def getUTF8Bytes(name: String): Array[Byte] = name.getBytes("UTF-8")
