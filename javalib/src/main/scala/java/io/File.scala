@@ -173,7 +173,7 @@ class File private () extends Serializable with Comparable[File] {
     @throws(classOf[IOException])
     private def filePathCopy(filePath: Array[Byte]): CString = {
         var pathCopy: CString = stackalloc[CChar](HyMaxPath)
-        val length = filePath.length()
+        val length: Int = filePath.length()
         if(length > (HyMaxPath-1)){
             //PathTooLongIOException don't exist, so I'm doing it myself
             throw new IOException("too long path")
@@ -186,8 +186,18 @@ class File private () extends Serializable with Comparable[File] {
         }
     }
 
-    //deleteOnExit schedule a
-    def deleteOnExit(): Unit = delete()
+    //need to determine wether we delete a file or a dir. 
+    def deleteOnExit(): Unit = {
+        var propPath: Array[Byte] = properPath(true)
+        if ((path.length() != 0) && isDirectoryImpl(propPath)) {
+            atexit{
+                remove(filePathCopy(filePath))
+            }
+        }
+        else atexit{
+            unistd.unlink(filePathCopy(filePath))
+        }    
+    }
 
     
     override def equals(obj: Any): Boolean = {
@@ -313,7 +323,7 @@ class File private () extends Serializable with Comparable[File] {
 
     @throws(classOf[IOException])
     def createNewFile(): Boolean = {
-        if(path.length( == 0)){
+        if(path.length() == 0){
             //corresponds to the entry "luni.B3" of the
             //internal Messages module from apache. 
             throw new IOException("No such file or directory")   
@@ -323,7 +333,7 @@ class File private () extends Serializable with Comparable[File] {
             case 1 => false
             //corresponds to the entry "luni.B4" of the
             //internal Messages module from apache.
-            case _ => throw new IOException("Cannot create\:"+ path)
+            case _ => throw new IOException("Cannot create"+ path)
         }
     }
 
@@ -339,7 +349,6 @@ class File private () extends Serializable with Comparable[File] {
         }
 
         if (isAbsolute()) {
-//FIXME
             var pathBytes: Array[Byte] = Util.getUTF8Bytes(path);
             return properPath = pathBytes;
         }
@@ -347,23 +356,20 @@ class File private () extends Serializable with Comparable[File] {
         var userdir: String;
         if (internal) {
 //FIXME
-            userdir = AccessController.doPrivileged(new PriviAction<String>(
+            userdir = AccessController.doPrivileged(new PriviAction[String](
                     "user.dir")); //$NON-NLS-1$
         } else {
-//FIXME
-            userdir = System.getProperty("user.dir"); //$NON-NLS-1$
+            userdir = CFile.getUserDir();      
         }
 
         if (path.length() == 0) {
-//FIXME
             return properPath = Util.getUTF8Bytes(userdir);
         }
         var length: Int = userdir.length();
 
         // Handle windows-like path
         if (path(0) == '\\') {
-            if (length > 1 && userdir.charAt(1) == ':') {
-//FIXME
+            if (length > 1 && userdir(1) == ':') {
                 return properPath = Util.getUTF8Bytes(userdir.substring(0, 2)
                         + path);
             }
@@ -381,7 +387,6 @@ class File private () extends Serializable with Comparable[File] {
 
         }
         result += path;
-//FIXME
         return properPath = Util.getUTF8Bytes(result);
     }
 
@@ -404,6 +409,8 @@ class File private () extends Serializable with Comparable[File] {
     def isCaseSensitiveImpl(): Int = extern
     def getPlatformRoots(rootStrings: Ptr[CChar]) = extern
     def file_attr(path: CString): Int = extern
+    def getOsEncoding(): CString = extern
+    def getUserDir(): CString = extern
 }
 
     //C function utilized to remove the file.
@@ -474,6 +481,20 @@ object File{
     def genTempFile(prefix: String, 
                         suffix: String,
                         directory: File): File = ???
+}
+
+
+//Implementation of the few used methods from 
+// org.hapache
+object Util{
+    private val defaultEncoding: String = fromCString(CFile.getOsEncoding())
+    def getBytes(name: String): Array[Byte] = name.getBytes(defaultEncoding)
+    def getUTF8Bytes(name: String): Array[Byte] = name.getBytes("UTF-8")
+    def toString(bytes: Array[Byte]): String = new String(bytes, 0, bytes.length, defaultEncoding)
+    def toUTF8String(bytes: Array[Byte]): String = toUTF8String(bytes, 0, bytes.length)
+    def toUTF8String(bytes: Array[Byte], 
+                     offset: Int, 
+                     length: Int): String = new String(bytes, 0, bytes.length, "UTF-8")
 }
 
 //TODO:
