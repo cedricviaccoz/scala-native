@@ -1,4 +1,4 @@
 Questions : 
 
 -
-There is deleteOnExit() which is a function that schedule a delete of the file once the JVM terminates, for now my implementation just casually calls delete, should I do something else ?
+What to do with AccessControl ?
