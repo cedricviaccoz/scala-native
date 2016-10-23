@@ -223,15 +223,148 @@ class File private () extends Serializable with Comparable[File] {
         return (CFile.file_attr(pathCopy) >= 0)
     }
 
-    def getAbsolutePath(): String = ???
+    def getAbsolutePath(): String = Util.toUTF8String(properPath(true))
 
     def getAbsoluteFile(): File = new File(this.getAbsolutePath())
 
     @throws(classOf[IOException])
-    def getCannonicalPath(): String = ???
+    def getCannonicalPath(): String = {
+        var result: Array[Byte] = properPath(false)
+        var absPath: String = Util.toUTF8String(result)
+//FIXME
+        var canonPath: String = FileCanonPathCache.get(absPath);
+        if (canonPath != null) {
+            return canonPath
+        }
+        if(separatorChar == '/') {
+            // resolve the full path first
+            result = resolveLink(result, result.length, false)
+            // resolve the parent directories
+            result = resolve(result)
+        }
+        var numSeparators: Int = 1;
+        for (int i = 0; i < result.length; i++) {
+            if (result(i) == separatorChar) {
+                numSeparators++
+            }
+        }
+        var sepLocations: Array[Int] = new Array[Int](numSeparators)
+        var rootLoc: Int = 0
+        if (separatorChar != '/') {
+            if (result[0] == '\\') {
+                rootLoc = if(result.length > 1 && result(1) == '\\') 1 else 0
+            } else {
+                rootLoc = 2 // skip drive i.e. c:
+            }
+        }
+        var newResult: Array[Byte] = new Array[Byte](result.length + 1)
+        var newLength: Int = 0 
+        var lastSlash: Int = 0 
+        var foundDots: Int = 0
+        sepLocations(lastSlash) = rootLoc;
+        //for (int i = 0; i <= result.length; i++) {
+        for(i <- 0 to result.length){
+            if (i < rootLoc) {
+                newResult(newLength++) = result(i)
+            } else {
+                if (i == result.length || result(i) == separatorChar) {
+                    if (i == result.length && foundDots == 0) {
+//FIXME
+                        break;
+                    }
+                    if (foundDots == 1) {
+                        /* Don't write anything, just reset and continue */
+                        foundDots = 0
+                    }
+                    if (foundDots > 1) {
+                        /* Go back N levels */
+                        lastSlash = if(lastSlash > (foundDots - 1)) 
+                                        lastSlash - (foundDots - 1) 
+                                    else 0
+                        newLength = sepLocations(lastSlash) + 1
+                        foundDots = 0
+                    }
+                    sepLocations(++lastSlash) = newLength
+                    newResult(newLength++) = separatorChar.toByte
+                }
+                if (result(i) == '.') {
+                    foundDots++
+                }
+                /* Found some dots within text, write them out */
+                if (foundDots > 0) {
+                    //for (int j = 0; j < foundDots; j++) {
+                    for(j <- 0 until foundDots)
+                        newResult(newLength++) = '.'.toByte
+                    }
+                }
+                newResult(newLength++) = result(i)
+                foundDots = 0
+            }
+        }
+        // remove trailing slash
+        if (newLength > (rootLoc + 1)
+                && newResult(newLength - 1) == separatorChar) {
+            newLength--
+        }
+        newResult(newLength) = 0
+//PORTMEs
+        newResult = getCanonImpl(newResult)
+        newLength = newResult.length
+        canonPath = Util.toUTF8String(newResult, 0, newLength)
+//FIXME
+        FileCanonPathCache.put(absPath, canonPath)
+        return canonPath
+    }
 
     @throws(classOf[IOException])
-    private def resolve(newResult: Array[Byte]): Array[Byte] = ???
+    private def resolve(newResult: Array[Byte]): Array[Byte] = {
+        var last: Int = 1 
+        var nextSize: Int 
+        var linkSize: Int
+        var linkPath: Array[Byte] = newResult 
+        var bytes: Array[Byte]
+        var done: Boolean 
+        var inPlace: Boolean
+        for (i <- 1 to newResult.length) {
+            if (i == newResult.length || newResult(i) == separatorChar) {
+                done = (i >= (newResult.length - 1))
+                // if there is only one segment, do nothing
+                if (done && linkPath.length == 1) {
+                    return newResult
+                }
+                inPlace = false
+                if (linkPath == newResult) {
+                    bytes = newResult
+                    // if there are no symbolic links, terminate the C string
+                    // instead of copying
+                    if (!done) {
+                        inPlace = true
+                        newResult(i) = '\0'
+                    }
+                } else {
+                    nextSize = i - last + 1
+                    linkSize = linkPath.length
+                    if (linkPath(linkSize - 1) == separatorChar) {
+                        linkSize--
+                    }
+                    bytes = new Array[Byte](linkSize + nextSize)
+                    System.arraycopy(linkPath, 0, bytes, 0, linkSize);
+                    System.arraycopy(newResult, last - 1, bytes, linkSize,
+                            nextSize)
+                    // the full path has already been resolved
+                }
+                if (done) {
+                    return bytes
+                }
+                linkPath = resolveLink(bytes, if(inPlace) i else bytes.length, true);
+                if (inPlace) {
+                    newResult(i) = '/'
+                }
+                last = i + 1
+            }
+        }
+        throw new InternalError();
+    }
 
     @throws(classOf[IOException])
     private def resolveLink(pathBytes: Array[Byte],
