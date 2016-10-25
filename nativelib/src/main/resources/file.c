@@ -1,16 +1,58 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <unistd.h>
+#include <unistd.h> // for Flags O_*
 #include <locale.h>
 #include <langinfo.h>
 #include <limits.h>
+#include <fcntl.h> // for open
+#include <stdint.h> // for int32_t
 
 //values chosen accordingly to the corresponding HyIsFile and HyIsDir in harmony
 #define isDir 0 
 #define isFile 1
 
-//#define TEST
+
+#define newFilImplFlag (O_TRUNC | O_CREAT | O_EXCL | O_RDWR)
+#define newFileImplMode 0666
+#ifdef ZOS
+#define FD_BIAS 1000
+#undef fwrite
+#undef fread
+#else
+#define FD_BIAS 0
+#endif /* ZOS */
+
+#define TEST
+
+/*this is a reimplementation of hyfile_open,
+  with all of its parameter and branches simplified
+  in order to only create à new File.*/
+int new_file_impl(const char * path){
+  int32_t fd;
+  int32_t fdflags;
+  fd = open(path, newFilImplFlag, newFileImplMode);
+  if(fd == -1){
+    return -1;
+  }
+  fdflags = fcntl(fd, F_GETFD, 0);
+  fcntl(fd, F_SETFD, fdflags | FD_CLOEXEC);
+  fd += FD_BIAS;
+  return (int) fd;
+}
+
+int filedescriptor_close(int fd){
+  
+#if (FD_BIAS != 0)
+    if (fd < FD_BIAS) {
+        /* Cannot close STD streams, and no other FD's should exist <FD_BIAS */
+      return -1;
+    }
+#endif
+
+    return close ((int) (fd - FD_BIAS));
+
+}
 
 char separatorChar(){
 #ifdef _WIN32
@@ -74,6 +116,8 @@ const char * getUserDir(){
       fprintf(stderr, "getcwd() error");
     }
 }
+
+
 
 #ifdef TEST
 int main(void){
