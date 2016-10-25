@@ -62,23 +62,6 @@ class File private () extends Serializable with Comparable[File] {
     	else path
     }
 
-    /*
-    //Okay apparently it is not the time to go full functionnal 
-    @throws(classOf[NullPointerException])
-    private def fixSlashes(origPath: String): String = {
-        def fixSlashesRec(path: List[Char]): List[Char] =
-        path match{
-            case ':'::'/'::'/'::xs => ':'::separatorChar::separatorChar::fixSlashesRec(xs)
-            case '/'::'/'::xs => separatorChar::fixSlashesRec(xs)
-            case '/'::Nil => Nil
-            case '/'::xs => separatorChar::fixSlashesRec(xs)
-            case x::xs => x::fixSlashesRec(xs)
-            case Nil => List()
-        }
-        if(origPath == null) throw new NullPointerException()
-        else fixSlashesRec(origPath.toList).mkString
-    }*/
-
     private def fixSlashes(origPath: String): String = {
         var uncIndex: Int = 1
         var length: Int = origPath.length() 
@@ -496,7 +479,11 @@ class File private () extends Serializable with Comparable[File] {
         var pathCopy: CString = filePathCopy(filePath)
         return (file_attr(pathCopy) == 1)
     }
-    def isHidden(): Boolean = ???
+
+    def isHidden(): Boolean = {
+        var pathCopy: CString = filePathCopy(filePath)
+        return (file_attr(pathCopy) == 1)
+    }
 
     //native funct.
     private def isHiddenImpl(filePath: Array[Byte]): Boolean = ???
@@ -565,14 +552,20 @@ class File private () extends Serializable with Comparable[File] {
             case 1 => false
             //corresponds to the entry "luni.B4" of the
             //internal Messages module from apache.
-            case _ => throw new IOException("Cannot create"+ path)
+            case _ => throw new IOException("Cannot create "+ path)
         }
     }
 
     //native funct.
+    @throws(classOf[IOException])
     private def newFileImpl(filePath: Array[Byte]): Int = {
         var pathCopy = filePathCopy(filePath)
-        ???
+        val portFD: CInt = new_file_impl(pathCopy)
+        if(portFD == -1){
+            if(new File(filePath).exits()) 1 else 2
+        }
+        fileDescriptor_close(portFD)
+        return 0
     }
 
     def properPath(internal: Boolean): Array[Byte] = {
@@ -646,6 +639,8 @@ class File private () extends Serializable with Comparable[File] {
     def file_attr(path: CString): Int = extern
     def getOsEncoding(): CString = extern
     def getUserDir(): CString = extern
+    def new_file_impl(): CInt = extern
+    def fileDescriptor_close(): CInt = extern
 }
 
     //C function utilized to remove the file.
