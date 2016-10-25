@@ -2,6 +2,8 @@ package java.io
 
 import scala.transient
 import scalanative.native._, stdlib._, stdio._, string._
+import java.util.LinkedList
+import java.util.HashMap
 
 class File private () extends Serializable with Comparable[File] {
     import File._
@@ -173,7 +175,7 @@ class File private () extends Serializable with Comparable[File] {
     @throws(classOf[IOException])
     private def filePathCopy(filePath: Array[Byte]): CString = {
         var pathCopy: CString = stackalloc[CChar](HyMaxPath)
-        val length: Int = filePath.length()
+        val length: Int = filePath.length
         if(length > (HyMaxPath-1)){
             //PathTooLongIOException don't exist, so I'm doing it myself
             throw new IOException("too long path")
@@ -223,14 +225,14 @@ class File private () extends Serializable with Comparable[File] {
         return (CFile.file_attr(pathCopy) >= 0)
     }
 
-    def getAbsolutePath(): String = Util.toUTF8String(properPath(true))
+    def getAbsolutePath(): String = HyUtil.toUTF8String(properPath(true))
 
     def getAbsoluteFile(): File = new File(this.getAbsolutePath())
 
     @throws(classOf[IOException])
     def getCannonicalPath(): String = {
         var result: Array[Byte] = properPath(false)
-        var absPath: String = Util.toUTF8String(result)
+        var absPath: String = HyUtil.toUTF8String(result)
 //FIXME
         var canonPath: String = FileCanonPathCache.get(absPath);
         if (canonPath != null) {
@@ -243,15 +245,15 @@ class File private () extends Serializable with Comparable[File] {
             result = resolve(result)
         }
         var numSeparators: Int = 1;
-        for (int i = 0; i < result.length; i++) {
+        for (i <- 0 until result.length) {
             if (result(i) == separatorChar) {
-                numSeparators++
+                numSeparators += 1
             }
         }
         var sepLocations: Array[Int] = new Array[Int](numSeparators)
         var rootLoc: Int = 0
         if (separatorChar != '/') {
-            if (result[0] == '\\') {
+            if (result(0) == '\\') {
                 rootLoc = if(result.length > 1 && result(1) == '\\') 1 else 0
             } else {
                 rootLoc = 2 // skip drive i.e. c:
@@ -261,70 +263,88 @@ class File private () extends Serializable with Comparable[File] {
         var newLength: Int = 0 
         var lastSlash: Int = 0 
         var foundDots: Int = 0
-        sepLocations(lastSlash) = rootLoc;
-        //for (int i = 0; i <= result.length; i++) {
-        for(i <- 0 to result.length){
-            if (i < rootLoc) {
-                newResult(newLength++) = result(i)
-            } else {
-                if (i == result.length || result(i) == separatorChar) {
-                    if (i == result.length && foundDots == 0) {
-//FIXME
-                        break;
+        sepLocations(lastSlash) = rootLoc
+
+        try{
+            for(i <- 0 to result.length){
+                if (i < rootLoc) {
+                    newLength += 1
+                    newResult(newLength) = result(i)
+                } else {
+                    if (i == result.length || result(i) == separatorChar) {
+                        if (i == result.length && foundDots == 0) {
+                            throw Break
+                        }
+                        if (foundDots == 1) {
+                            /* Don't write anything, just reset and continue */
+                            foundDots = 0
+                        }
+                        if (foundDots > 1) {
+                            /* Go back N levels */
+                            lastSlash = if(lastSlash > (foundDots - 1)) 
+                                            lastSlash - (foundDots - 1) 
+                                        else 0
+                            newLength = sepLocations(lastSlash) + 1
+                            foundDots = 0
+                        }
+                        lastSlash += 1
+                        sepLocations(lastSlash) = newLength
+                        newLength += 1
+                        newResult(newLength) = separatorChar.toByte
                     }
-                    if (foundDots == 1) {
-                        /* Don't write anything, just reset and continue */
-                        foundDots = 0
+                    if (result(i) == '.') {
+                        foundDots += 1
                     }
-                    if (foundDots > 1) {
-                        /* Go back N levels */
-                        lastSlash = if(lastSlash > (foundDots - 1)) 
-                                        lastSlash - (foundDots - 1) 
-                                    else 0
-                        newLength = sepLocations(lastSlash) + 1
-                        foundDots = 0
+                    /* Found some dots within text, write them out */
+                    if (foundDots > 0) {
+                        for(j <- 0 until foundDots){
+                            newLength += 1
+                            newResult(newLength) = '.'.toByte
+                        }
                     }
-                    sepLocations(++lastSlash) = newLength
-                    newResult(newLength++) = separatorChar.toByte
+                    newLength += 1
+                    newResult(newLength) = result(i)
+                    foundDots = 0
                 }
-                if (result(i) == '.') {
-                    foundDots++
-                }
-                /* Found some dots within text, write them out */
-                if (foundDots > 0) {
-                    //for (int j = 0; j < foundDots; j++) {
-                    for(j <- 0 until foundDots)
-                        newResult(newLength++) = '.'.toByte
-                    }
-                }
-                newResult(newLength++) = result(i)
-                foundDots = 0
+            }    
+        } catch{ 
+            case Break => endOfFunct
+            case ioexcep : IOException => throw ioexcep
+        }
+        
+        def endOfFunct = {
+            // remove trailing slash
+            if(newLength > (rootLoc + 1)
+                    && newResult(newLength - 1) == separatorChar) {
+                newLength -= 1
             }
+            newResult(newLength) = 0
+    //PORTME
+            newResult = getCanonImpl(newResult)
+            newLength = newResult.length
+            canonPath = HyUtil.toUTF8String(newResult, 0, newLength)
+    //FIXME
+            FileCanonPathCache.put(absPath, canonPath)
+            return canonPath
         }
-        // remove trailing slash
-        if (newLength > (rootLoc + 1)
-                && newResult(newLength - 1) == separatorChar) {
-            newLength--
-        }
-        newResult(newLength) = 0
-//PORTMEs
-        newResult = getCanonImpl(newResult)
-        newLength = newResult.length
-        canonPath = Util.toUTF8String(newResult, 0, newLength)
-//FIXME
-        FileCanonPathCache.put(absPath, canonPath)
-        return canonPath
+        endOfFunct
     }
 
     @throws(classOf[IOException])
     private def resolve(newResult: Array[Byte]): Array[Byte] = {
         var last: Int = 1 
-        var nextSize: Int 
-        var linkSize: Int
+
+        //prev. unintialized
+        var nextSize: Int = 0
+        //prev. unintialized
+        var linkSize: Int = 0
         var linkPath: Array[Byte] = newResult 
-        var bytes: Array[Byte]
-        var done: Boolean 
-        var inPlace: Boolean
+        //prev. unintialized
+        var bytes: Array[Byte] = null
+        //prev. unintialized
+        var done: Boolean = false
+        //prev. unintialized
+        var inPlace: Boolean = false
         for (i <- 1 to newResult.length) {
             if (i == newResult.length || newResult(i) == separatorChar) {
                 done = (i >= (newResult.length - 1))
@@ -345,7 +365,7 @@ class File private () extends Serializable with Comparable[File] {
                     nextSize = i - last + 1
                     linkSize = linkPath.length
                     if (linkPath(linkSize - 1) == separatorChar) {
-                        linkSize--
+                        linkSize -= 1
                     }
                     bytes = new Array[Byte](linkSize + nextSize)
                     System.arraycopy(linkPath, 0, bytes, 0, linkSize);
@@ -369,7 +389,48 @@ class File private () extends Serializable with Comparable[File] {
     @throws(classOf[IOException])
     private def resolveLink(pathBytes: Array[Byte],
                             length: Int,
-                            resolveAbsolute: Boolean): Array[Byte] = ??? 
+                            resolveAbsolute: Boolean): Array[Byte] ={
+        var restart: Boolean = false
+
+        //previously uninitialized
+        var linkBytes: Array[Byte] = null;
+        
+        //previously uninitialized
+        var temp: Array[Byte] = null;
+        try{
+            do {
+                linkBytes = getLinkImpl(pathBytes)
+                if (linkBytes == pathBytes) {
+                    throw Break
+                }
+                if (linkBytes(0) == separatorChar) {
+                    // link to an absolute path, if resolving absolute paths,
+                    // resolve the parent dirs again
+                    restart = resolveAbsolute
+                    pathBytes = linkBytes
+                } else {
+                    var last: Int = length - 1;
+                    while (pathBytes(last) != separatorChar) {
+                        last -= 1
+                    }
+                    last += 1
+                    temp = new Array[Byte](last + linkBytes.length)
+                    System.arraycopy(pathBytes, 0, temp, 0, last);
+                    System.arraycopy(linkBytes, 0, temp, last, linkBytes.length);
+                    pathBytes = temp;
+                }
+                length = pathBytes.length;
+            } while (existsImpl(pathBytes))
+        } catch{
+            case Break => 
+            case e: IOException => throw e
+        }
+        // resolve the parent directories
+        if (restart) {
+            return resolve(pathBytes);
+        }
+        return pathBytes;
+    } 
 
     @throws(classOf[IOException])
     def getCannonicalFile(): File = ???
@@ -487,7 +548,9 @@ class File private () extends Serializable with Comparable[File] {
             return properPath
         }
         // Check security by getting user.dir when the path is not absolute
-        var userdir: String;
+        
+        //prev. unintialized
+        var userdir: String = ""
         if (internal) {
 //FIXME
             userdir = AccessController.doPrivileged(new PriviAction[String](
@@ -554,9 +617,96 @@ class File private () extends Serializable with Comparable[File] {
     def unlink(path: CString): CInt = extern
 }
 
+//implementation of the few used methods from
+//org.apache.harmony.luni.internal.io.FileCanonPathCache
+object FileCanonPathCache {
+    private class CacheElement() {
+        var canonicalPath: String
+        var timestamp: Long 
+        
+        def this(canonPath: String) = {
+            this()
+            canonicalPath = canonPath
+            timestamp = System.currentTimeMillis()
+        }
+    }
+
+    @volatile
+    var timeout: Long = 30000;
+
+    private val CACHE_SIZE: Int = 256
+
+    private val cache : HashMap[String, CacheElement] = new HashMap[String, CacheElement](CACHE_SIZE)
+
+    private val list: LinkedList[String] = new LinkedList[String]()
+
+    def put(path: String, canonicalPath: String):Unit = {
+        if( timeout != 0){
+            var element: CacheElement = new CacheElement(cannonicalPath)
+            synchronized /*(lock)*/ {
+                if(cache.size() >= CACHE_SIZE){
+                    val oldest: String = list.removeFirst()
+                    cache.remove(oldest)
+                }
+                cache.put(path, element)
+                list.addLast(path)
+            }
+   
+        }
+    }
+
+    def get(path: String): String = {
+        var localTimeout: Long = timeout;
+        if (localTimeout == 0) {
+            return null
+        }
+
+        var element: CacheElement = null
+        synchronized /*(lock)*/ {
+            element = cache.get(path)
+        }
+
+        if (element == null) {
+            return null
+        }
+
+        var time: Long = System.currentTimeMillis();
+        if (time - element.timestamp > localTimeout) {
+            // remove all elements older than this one
+            synchronized /* (lock) */ {
+                if (cache.get(path) != null) {
+                    var oldest: String = null
+                    do {
+                        oldest = list.removeFirst()
+                        cache.remove(oldest)
+                    } while (!path.equals(oldest))
+                }
+            }
+            return null
+        }
+
+        return element.canonicalPath
+    }
+}
+
+//Implementation of the few used methods from 
+// org.hapache.harmony.luni.
+object HyUtil{
+    private val defaultEncoding: String = fromCString(CFile.getOsEncoding())
+    def getBytes(name: String): Array[Byte] = name.getBytes(defaultEncoding)
+    def getUTF8Bytes(name: String): Array[Byte] = name.getBytes("UTF-8")
+    def toString(bytes: Array[Byte]): String = new String(bytes, 0, bytes.length, defaultEncoding)
+    def toUTF8String(bytes: Array[Byte]): String = toUTF8String(bytes, 0, bytes.length)
+    def toUTF8String(bytes: Array[Byte], 
+                     offset: Int, 
+                     length: Int): String = new String(bytes, 0, bytes.length, "UTF-8")
+}
+
+
+//way to handle break in Scala.
+object Break extends Exception{}
 
 object File{
-
 
     /*need to determine If I need an implementation of this C funct.*/
     //oneTimeInitialization();
@@ -619,20 +769,6 @@ object File{
                         directory: File): File = ???
 }
 
-
-//Implementation of the few used methods from 
-// org.hapache
-object HyUtil{
-    private val defaultEncoding: String = fromCString(CFile.getOsEncoding())
-    def getBytes(name: String): Array[Byte] = name.getBytes(defaultEncoding)
-    def getUTF8Bytes(name: String): Array[Byte] = name.getBytes("UTF-8")
-    def toString(bytes: Array[Byte]): String = new String(bytes, 0, bytes.length, defaultEncoding)
-    def toUTF8String(bytes: Array[Byte]): String = toUTF8String(bytes, 0, bytes.length)
-    def toUTF8String(bytes: Array[Byte], 
-                     offset: Int, 
-                     length: Int): String = new String(bytes, 0, bytes.length, "UTF-8")
-}
-
 //TODO:
 //private def checkURI(uri : URI): Unit
 
@@ -646,7 +782,7 @@ private def readObject(stream: ObjectInputStream): Unit = ???*/
 //def toURI(): URI
 
 /*@throws(classOf[java.net.MalformedURLException])
-def toURL(): URL = ???*/
+def toURL(): URL*/
 
 /*def File(uri: URI): File = {
     this()
