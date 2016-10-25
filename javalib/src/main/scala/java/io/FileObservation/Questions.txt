@@ -2,7 +2,7 @@ Questions :
 
 -
 What to do with AccessController ?
-Because I've got this line : userdir = AccessController.doPrivileged(new PriviAction[String]("user.dir"))
+Because I've got this line : userdir = AccessController.doPrivileged(new PriviAction[String]("user.dir")) again it seems to check for a permission 
 
 -
 I have a lot of static import (object) where should I put them on the file structure ?
@@ -11,3 +11,4 @@ I have a lot of static import (object) where should I put them on the file struc
 My way to handle break instruction is by making break an Exception I'm launching and then catching it to get out of loops from the import of java I made. Is it an okay way ?
 
 -
+How to use function pointer ?

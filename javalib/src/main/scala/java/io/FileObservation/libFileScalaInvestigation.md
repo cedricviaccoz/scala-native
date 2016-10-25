@@ -34,7 +34,16 @@ Java_java_io_File_newFileImpl (JNIEnv * env, jobject recv, jbyteArray path)
 }
 ```
 
+
 ### hyfile_open
+
+flags : HyOpenCreateNew | HyOpenWrite | HyOpenTruncate = (0100 0110) = 
+HyOpenCreateNew : 64 (0100 0000)
+HyOpenWrite : 2	(0000 0010)
+HyOpenTruncate : 8 (0000 0100)
+
+I_32 mode : 0666
+
 ```
 /**
  * Convert a pathname into a file descriptor.
@@ -96,6 +105,65 @@ hyfile_open (struct HyPortLibrary *portLibrary, const char *path, I_32 flags,
   return (IDATA) fd;
 }
 ```
+
+
+#### EsTranslateOpenFlags
+thos macros are from unistd.h
+O_APPEND
+O_TRUNC
+O_CREAT
+O_EXCL
+O_SYNC
+O_RDONLY
+O_WRONLY
+O_RDWR
+
+for the flags given in newFileImpl, the variable returned should be realFlag = O_TRUNC | O_CREAT | O_EXCL | O_RDWR
+
+```
+static I_32
+EsTranslateOpenFlags (I_32 flags)
+{
+  //flag to treat = 0100 0110
+  I_32 realFlags = 0;
+
+  if (flags & HyOpenAppend)
+    {
+      realFlags |= O_APPEND;
+    }
+  if (flags & HyOpenTruncate)
+    {
+      realFlags |= O_TRUNC;
+    }
+  if (flags & HyOpenCreate)
+    {
+      realFlags |= O_CREAT;
+    }
+  if (flags & HyOpenCreateNew)
+    {
+      realFlags |= O_EXCL | O_CREAT;
+    }
+#ifdef O_SYNC
+	if (flags & HyOpenSync) {
+		realFlags |= O_SYNC;
+	}
+#endif    
+  if (flags & HyOpenRead)
+    {
+      if (flags & HyOpenWrite)
+        {
+          return (O_RDWR | realFlags);
+        }
+      return (O_RDONLY | realFlags);
+    }
+  if (flags & HyOpenWrite)
+    {
+      return (O_WRONLY | realFlags);
+    }
+  return -1;
+}
+```
+
 
 
 ## native existsImpl
