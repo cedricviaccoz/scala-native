@@ -177,8 +177,7 @@ class File private () extends Serializable with Comparable[File] {
         var pathCopy: CString = stackalloc[CChar](HyMaxPath)
         val length: Int = filePath.length
         if(length > (HyMaxPath-1)){
-            //PathTooLongIOException don't exist, so I'm doing it myself
-            throw new IOException("too long path")
+            throw new IOException("Path length of "+length+" characters exceeds maximum supported length of "+HyMaxPath)
         }else{  
             for(i <- 0 until length){
                     pathCopy(i) = filePath(i)
@@ -188,18 +187,8 @@ class File private () extends Serializable with Comparable[File] {
         }
     }
 
-    //need to determine wether we delete a file or a dir. 
-    def deleteOnExit(): Unit = {
-        var propPath: Array[Byte] = properPath(true)
-        if ((path.length() != 0) && isDirectoryImpl(propPath)) {
-            atexit{
-                remove(filePathCopy(propPath))
-            }
-        }
-        else atexit{
-            unistd.unlink(filePathCopy(propPath))
-        }    
-    }
+    //need to understand how to use deleteOnExit
+    def deleteOnExit(): Unit =  ??? //atexit{ FunctionPtr(delete()) }
 
     
     override def equals(obj: Any): Boolean = {
@@ -230,10 +219,9 @@ class File private () extends Serializable with Comparable[File] {
     def getAbsoluteFile(): File = new File(this.getAbsolutePath())
 
     @throws(classOf[IOException])
-    def getCannonicalPath(): String = {
+    def getCanonicalPath(): String = {
         var result: Array[Byte] = properPath(false)
         var absPath: String = HyUtil.toUTF8String(result)
-//FIXME
         var canonPath: String = FileCanonPathCache.get(absPath);
         if (canonPath != null) {
             return canonPath
@@ -312,18 +300,16 @@ class File private () extends Serializable with Comparable[File] {
             case ioexcep : IOException => throw ioexcep
         }
         
-        def endOfFunct = {
+        def endOfFunct: String = {
             // remove trailing slash
             if(newLength > (rootLoc + 1)
                     && newResult(newLength - 1) == separatorChar) {
                 newLength -= 1
             }
             newResult(newLength) = 0
-    //PORTME
             newResult = getCanonImpl(newResult)
             newLength = newResult.length
             canonPath = HyUtil.toUTF8String(newResult, 0, newLength)
-    //FIXME
             FileCanonPathCache.put(absPath, canonPath)
             return canonPath
         }
@@ -387,9 +373,10 @@ class File private () extends Serializable with Comparable[File] {
     }
 
     @throws(classOf[IOException])
-    private def resolveLink(pathBytes: Array[Byte],
+    private def resolveLink(pathBytesGiven: Array[Byte],
                             length: Int,
                             resolveAbsolute: Boolean): Array[Byte] ={
+        var pathBytes: Array[Byte] = pathBytesGiven
         var restart: Boolean = false
 
         //previously uninitialized
@@ -419,45 +406,96 @@ class File private () extends Serializable with Comparable[File] {
                     System.arraycopy(linkBytes, 0, temp, last, linkBytes.length);
                     pathBytes = temp;
                 }
-                length = pathBytes.length;
+                //can't do that in scala.
+                //length = pathBytes.length;
             } while (existsImpl(pathBytes))
         } catch{
-            case Break => 
+            case Break => endOfFunct
             case e: IOException => throw e
         }
-        // resolve the parent directories
-        if (restart) {
-            return resolve(pathBytes);
-        }
-        return pathBytes;
+        def endOfFunct: Array[Byte] = if(restart) resolve(pathBytes) else pathBytes
+        endOfFunct
     } 
 
     @throws(classOf[IOException])
-    def getCannonicalFile(): File = ???
+    def getCannonicalFile(): File = new File(getCanonicalPath())
 
     //native funct.
-    private def getCannonImpl(filePath: Array[Byte]): Array[Byte] = ???
+    private def getCanonImpl(filePath: Array[Byte]): Array[Byte] = ???
 
-    def getName(): String = ???
+    def getName(): String = {
+        val separatorIndex: Int = path.lastIndexOf(separator)
+        if(separatorIndex < 0) path else path.substring(separatorIndex, path.length())
+    }
 
-    def getParent(): String = ???
+    def getParent(): String = {
+        val length: Int = path.length()
+        if(separatorChar == '\\' && length > 2 && path(1) == ':'){
+            firstInPath = 2
+        }
+        var index: Int = path.lastIndexOf(separatorChar)
+        if(index == -1 && firstInPath > 0) index = 2
+        if(index == -1 || path(length -1) == separatorChar) return null
+        if(path.indexOf(separatorChar) == index 
+            && path(firstInPath) == separatorChar) return path.substring(0, index+1)
+        return path.substring(0, index)
+    }
 
-    def getParentFile(): File = ???
+    def getParentFile(): File = {
+        var tempParent: String = getParent()
+        if(tempParent == null) return null
+        return new File(tempParent)
+    }
 
-    override def hashCode(): Int = ???
+    override def hashCode(): Int = if(caseSensitive) path.hashCode ^ 1234321
+    else path.toLowerCase().hashCode ^ 1234321
 
-    def isAbsolute(): Boolean = ???
+    def isAbsolute(): Boolean = {
+        if (File.separatorChar == '\\') {
+            // for windows
+            if (path.length() > 1 && path(0) == File.separatorChar
+                    && path.charAt(1) == File.separatorChar) {
+                return true
+            }
+            if (path.length() > 2) {
+                if ((path.charAt(0).isLetter() && path(1) == ':'
+                        && (path(2) == '/' || path(2) == '\\')) {
+                    return true
+                }
+            }
+            return false
+        }
 
-    def isDirectory(): Boolean = ???
+        // for Linux
+        return (path.length() > 0 && path(0) == File.separatorChar);
+    }
+
+    def isDirectory(): Boolean = {
+        if (path.length() == 0) {
+            return false
+        }
+        return isDirectoryImpl(properPath(true))
+    }
 
     //native funct.
-    private def isDirectoryImpl(filePath: Array[Byte]): Boolean = ???
+    private def isDirectoryImpl(filePath: Array[Byte]): Boolean = {
+        var pathCopy: CString = filePathCopy(filePath)
+        return (file_attr(pathCopy) == 0)
+    }
 
-    def isFile(): Boolean = ???
+    def isFile(): Boolean = {
+        if (path.length() == 0) {
+            return false
+        }
+        return isFileImpl(properPath(true))
+    }
+
 
     //native funct.
-    private def isFileImpl(filePath: Array[Byte]) = ???
-
+    private def isFileImpl(filePath: Array[Byte]) = {
+        var pathCopy: CString = filePathCopy(filePath)
+        return (file_attr(pathCopy) == 1)
+    }
     def isHidden(): Boolean = ???
 
     //native funct.
@@ -551,13 +589,11 @@ class File private () extends Serializable with Comparable[File] {
         
         //prev. unintialized
         var userdir: String = ""
-        if (internal) {
-//FIXME
+        /*if (internal) {
             userdir = AccessController.doPrivileged(new PriviAction[String](
                     "user.dir")); //$NON-NLS-1$
-        } else {
+        } else*/
             userdir = fromCString(CFile.getUserDir())     
-        }
 
         if (path.length() == 0) {
             properPath = HyUtil.getUTF8Bytes(userdir);
@@ -642,7 +678,7 @@ object FileCanonPathCache {
 
     def put(path: String, canonicalPath: String):Unit = {
         if( timeout != 0){
-            var element: CacheElement = new CacheElement(cannonicalPath)
+            var element: CacheElement = new CacheElement(canonicalPath)
             synchronized /*(lock)*/ {
                 if(cache.size() >= CACHE_SIZE){
                     val oldest: String = list.removeFirst()
