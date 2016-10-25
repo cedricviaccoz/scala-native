@@ -58,42 +58,6 @@ object Integer {
                                                            100,
                                                            10,
                                                            1)
-  private final val digits = Array('0',
-                                   '1',
-                                   '2',
-                                   '3',
-                                   '4',
-                                   '5',
-                                   '6',
-                                   '7',
-                                   '8',
-                                   '9',
-                                   'a',
-                                   'b',
-                                   'c',
-                                   'd',
-                                   'e',
-                                   'f',
-                                   'g',
-                                   'h',
-                                   'i',
-                                   'j',
-                                   'k',
-                                   'l',
-                                   'm',
-                                   'n',
-                                   'o',
-                                   'p',
-                                   'q',
-                                   'r',
-                                   's',
-                                   't',
-                                   'u',
-                                   'v',
-                                   'w',
-                                   'x',
-                                   'y',
-                                   'z')
 
   @inline def bitCount(i: scala.Int): scala.Int =
     Intrinsics.`llvm.ctpop.i32`(i)
@@ -111,8 +75,8 @@ object Integer {
     val length = nm.length()
     if (length == 0) throw new NumberFormatException()
 
-    var i     = 0
-    var first = nm.charAt(i)
+    var i        = 0
+    var first    = nm.charAt(i)
     val negative = first == '-'
     if (negative) {
       if (length == 1) throw new NumberFormatException(nm)
@@ -273,7 +237,7 @@ object Integer {
       if (i == 0) 1
       else 32 - numberOfLeadingZeros(i)
     val buffer = new Array[Char](count)
-    var k = i
+    var k      = i
     do {
       count -= 1
       buffer(count) = ((k & 1) + '0').toChar
@@ -288,7 +252,7 @@ object Integer {
       if (i == 0) 1
       else ((32 - numberOfLeadingZeros(i)) + 3) / 4
     val buffer = new Array[Char](count)
-    var k = i
+    var k      = i
     do {
       var t = k & 15
       if (t > 9) {
@@ -309,7 +273,7 @@ object Integer {
       if (i == 0) 1
       else ((32 - numberOfLeadingZeros(i)) + 2) / 3
     val buffer = new Array[Char](count)
-    var k = i
+    var k      = i
     do {
       count -= 1
       buffer(count) = ((k & 7) + '0').toChar
@@ -339,7 +303,7 @@ object Integer {
         var last_digit = first_digit
         var quot       = positive_value
         do {
-          val res = quot / 10
+          val res         = quot / 10
           var digit_value = quot - ((res << 3) + (res << 1))
           digit_value += '0'
           buffer(last_digit) = digit_value.toChar
@@ -440,9 +404,9 @@ object Integer {
       val radix =
         if (_radix < Character.MIN_RADIX || _radix > Character.MAX_RADIX) 10
         else _radix
-      var i     = _i
-      var j     = _i
-      var count = 2
+      var i        = _i
+      var j        = _i
+      var count    = 2
       val negative = _i < 0
       if (!negative) {
         count = 1
@@ -487,9 +451,83 @@ object Integer {
   @inline def valueOf(s: String, radix: scala.Int): Integer =
     valueOf(parseInt(s, radix))
 
-  // TODO:
-  // def parseUnsignedInt(s: String): scala.Int = parseUnsignedInt(s, 10)
-  // def parseUnsignedInt(s: String, radix: scala.Int): scala.Int = ???
-  // def toUnsignedString(i: scala.Int): String = toUnsignedString(i, 10)
-  // def toUnsignedString(_i: scala.Int, _radix: scala.Int): String = ???
+  @inline def parseUnsignedInt(s: String): scala.Int = parseUnsignedInt(s, 10)
+
+  def parseUnsignedInt(s: String, radix: scala.Int): scala.Int = {
+    if (s == null || radix < Character.MIN_RADIX ||
+        radix > Character.MAX_RADIX) throw new NumberFormatException(s)
+
+    val len = s.length()
+
+    if (len == 0) throw new NumberFormatException(s)
+
+    val hasPlusSign = s.charAt(0) == '+'
+
+    if (hasPlusSign && len == 1) throw new NumberFormatException(s)
+
+    val offset = if (hasPlusSign) 1 else 0
+
+    parseUnsigned(s, offset, radix)
+  }
+
+  private def parseUnsigned(s: String, _offset: Int, radix: Int): scala.Int = {
+    val unsignedIntMaxValue = -1
+    val max                 = divideUnsigned(unsignedIntMaxValue, radix)
+    var result              = 0
+    var offset              = _offset
+    val length              = s.length()
+
+    while (offset < length) {
+      val digit = Character.digit(s.charAt(offset), radix)
+      offset += 1
+
+      if (digit == -1) throw new NumberFormatException(s)
+
+      if (compareUnsigned(result, max) > 0) throw new NumberFormatException(s)
+
+      result = result * radix + digit
+
+      if (compareUnsigned(digit, result) > 0)
+        throw new NumberFormatException(s)
+    }
+
+    result
+  }
+
+  @inline def toUnsignedString(i: scala.Int): String = toUnsignedString(i, 10)
+
+  def toUnsignedString(_i: scala.Int, _radix: scala.Int): String = {
+    if (_i == 0) {
+      "0"
+    } else {
+
+      val radix =
+        if (_radix < Character.MIN_RADIX || _radix > Character.MAX_RADIX) {
+          10
+        } else _radix
+
+      var j = _i
+      var l = _i
+
+      // calculate string size
+      var count = 1
+      l = divideUnsigned(l, radix)
+      while (l != 0) {
+        count += 1
+        l = divideUnsigned(l, radix)
+      }
+
+      // populate string with characters
+      val buffer = new Array[Char](count)
+      do {
+        val digit = remainderUnsigned(j, radix)
+        val ch    = Character.forDigit(digit.toInt, radix)
+        count -= 1
+        buffer(count) = ch
+        j = divideUnsigned(j, radix)
+      } while (j != 0)
+
+      new String(buffer)
+    }
+  }
 }

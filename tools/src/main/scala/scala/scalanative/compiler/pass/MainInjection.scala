@@ -13,8 +13,8 @@ class MainInjection(entry: Global)(implicit fresh: Fresh) extends Pass {
   override def preAssembly = {
     case defns =>
       val mainTy = Type.Function(
-          Seq(Arg(Type.Module(entry.top)), Arg(ObjectArray)),
-          Type.Void)
+        Seq(Arg(Type.Module(entry.top)), Arg(ObjectArray)),
+        Type.Void)
       val main   = Val.Global(entry, Type.Ptr)
       val argc   = Val.Local(fresh(), Type.I32)
       val argv   = Val.Local(fresh(), Type.Ptr)
@@ -23,18 +23,15 @@ class MainInjection(entry: Global)(implicit fresh: Fresh) extends Pass {
       val arr    = Val.Local(fresh(), ObjectArray)
 
       defns :+ Defn.Define(
-          Attrs.None,
-          mainName,
-          mainSig,
-          Seq(
-              Block(fresh(),
-                    Seq(argc, argv),
-                    Seq(Inst(rt.name, Op.Module(Rt.name)),
-                        Inst(arr.name,
-                             Op.Call(initSig, init, Seq(rt, argc, argv))),
-                        Inst(module.name, Op.Module(entry.top)),
-                        Inst(Op.Call(mainTy, main, Seq(module, arr)))),
-                    Cf.Ret(Val.I32(0)))))
+        Attrs.None,
+        mainName,
+        mainSig,
+        Seq(Inst.Label(fresh(), Seq(argc, argv)),
+            Inst.Let(rt.name, Op.Module(Rt.name)),
+            Inst.Let(arr.name, Op.Call(initSig, init, Seq(rt, argc, argv))),
+            Inst.Let(module.name, Op.Module(entry.top)),
+            Inst.Let(Op.Call(mainTy, main, Seq(module, arr))),
+            Inst.Ret(Val.I32(0))))
   }
 }
 

@@ -8,11 +8,7 @@ import compiler.analysis.ClassHierarchyExtractors._
 import util.ScopedVar, ScopedVar.scoped
 import nir._
 
-/** Lowers strings values into intrinsified global constants.
- *
- *  Eliminates:
- *  - Val.String
- */
+/** Maps string values to intrinsified global constants. */
 class StringLowering(implicit top: Top) extends Pass {
   import StringLowering._
 
@@ -34,12 +30,12 @@ class StringLowering(implicit top: Top) extends Pass {
       val chars       = v.toCharArray
       val charsLength = Val.I32(chars.length)
       val charsConst = Val.Const(
-          Val.Struct(
-              Global.None,
-              Seq(CharArrayCls.typeConst,
-                  charsLength,
-                  Val.I32(0), // padding to get next field aligned properly
-                  Val.Array(Type.I16, chars.map(c => Val.I16(c.toShort))))))
+        Val.Struct(
+          Global.None,
+          Seq(CharArrayCls.typeConst,
+              charsLength,
+              Val.I32(0), // padding to get next field aligned properly
+              Val.Array(Type.I16, chars.map(c => Val.I16(c.toShort))))))
 
       val fieldValues = stringFieldNames.map {
         case StringValueName          => charsConst

@@ -7,7 +7,7 @@ trait Show[T] { def apply(t: T): Show.Result }
 object Show {
   sealed abstract class Result {
     override def toString = {
-      val sb = new StringBuilder
+      val sb          = new StringBuilder
       var indentation = 0
       def nl(res: Result) = {
         sb.append("\n")
@@ -27,14 +27,14 @@ object Show {
           }
           loop(xs.last)
           loop(post)
-        case Indent(res) =>
-          indentation += 1
+        case Indent(res, n) =>
+          indentation += n
           nl(res)
-          indentation -= 1
-        case Unindent(res) =>
-          indentation -= 1
+          indentation -= n
+        case Unindent(res, n) =>
+          indentation -= n
           nl(res)
-          indentation += 1
+          indentation += n
         case Newline(res) =>
           nl(res)
         case Interpolated(parts, args) =>
@@ -49,7 +49,7 @@ object Show {
       sb.toString
     }
   }
-  final case object None extends Result
+  final case object None                 extends Result
   final case class Str(value: String)    extends Result
   final case class Sequence(xs: Result*) extends Result
   final case class Repeat(xs: Seq[Result],
@@ -57,9 +57,9 @@ object Show {
                           pre: Result = None,
                           post: Result = None)
       extends Result
-  final case class Indent(res: Result)   extends Result
-  final case class Unindent(res: Result) extends Result
-  final case class Newline(res: Result)  extends Result
+  final case class Indent(res: Result, n: Int = 1)   extends Result
+  final case class Unindent(res: Result, n: Int = 1) extends Result
+  final case class Newline(res: Result)              extends Result
   final case class Interpolated(parts: Seq[String], args: Seq[Result])
       extends Result
 

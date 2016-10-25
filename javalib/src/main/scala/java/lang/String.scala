@@ -22,7 +22,7 @@ final class _String()
       offset = 0
       value = {
         val value = new Array[Char](length)
-        var i = 0
+        var i     = 0
         while (i < length) {
           value(i) = ((high & 0xff) << 8 | (data(start + i) & 0xff)).toChar
           i += 1
@@ -202,34 +202,30 @@ final class _String()
   def endsWith(suffix: _String): scala.Boolean =
     regionMatches(count - suffix.count, suffix, 0, suffix.count)
 
-  override def equals(obj: Any): scala.Boolean = {
-    if (obj == this) {
+  override def equals(obj: Any): scala.Boolean = obj match {
+    case s: _String if s eq this =>
       true
-    } else {
-      obj match {
-        case s: _String =>
-          val thisHash = this.hashCode()
-          val thatHash = s.hashCode()
+    case s: _String =>
+      val thisHash = this.hashCode()
+      val thatHash = s.hashCode()
 
-          if (count != s.count ||
-              (thisHash != thatHash && thisHash != 0 && thatHash != 0)) {
-            false
+      if (count != s.count ||
+          (thisHash != thatHash && thisHash != 0 && thatHash != 0)) {
+        false
+      } else {
+        var i = 0
+        while (i < count) {
+          if (value(offset + i) != s.value(s.offset + i)) {
+            return false
           } else {
-            var i = 0
-            while (i < count) {
-              if (value(offset + i) != s.value(s.offset + i)) {
-                return false
-              } else {
-                i += 1
-              }
-            }
-
-            true
+            i += 1
           }
-        case _ =>
-          false
+        }
+
+        true
       }
-    }
+    case _ =>
+      false
   }
 
   def equalsIgnoreCase(string: _String): scala.Boolean = {
@@ -432,7 +428,7 @@ final class _String()
   def lastIndexOf(c: Int): Int = lastIndexOf(c, count - 1)
 
   def lastIndexOf(subString: _String, _start: Int): Int = {
-    var start = _start
+    var start    = _start
     val subCount = subString.count
     if (subCount <= count && start >= 0) {
       if (subCount > 0) {
@@ -556,7 +552,7 @@ final class _String()
     } else if (replacement == null) {
       throw new NullPointerException("replacement should not be null")
     } else {
-      val ts = target.toString
+      val ts    = target.toString
       var index = indexOf(ts, 0)
 
       if (index == -1) return this
@@ -580,7 +576,7 @@ final class _String()
 
       val buffer = new java.lang.StringBuilder(count + rs.length)
       val tl     = target.length
-      var tail = 0
+      var tail   = 0
       do {
         buffer.append(value, offset + tail, index - tail)
         buffer.append(rs)
@@ -643,8 +639,8 @@ final class _String()
 
   def trim(): _String = {
     var start = offset
-    val last = offset + count - 1
-    var end = last
+    val last  = offset + count - 1
+    var end   = last
 
     while ((start <= end) && (value(start) <= ' ')) {
       start += 1
@@ -739,7 +735,7 @@ object _String {
     new CaseInsensitiveComparator()
   private final val ascii = {
     val ascii = new Array[Char](128)
-    var i = 0
+    var i     = 0
     while (i < ascii.length) {
       ascii(i) = i.toChar
       i += 1

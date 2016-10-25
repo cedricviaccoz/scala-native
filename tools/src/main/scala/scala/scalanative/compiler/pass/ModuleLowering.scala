@@ -37,21 +37,15 @@ import nir._
  *          store[class $name] @"module.$name", %alloc
  *          ret %alloc
  *      }
- *
- *  Eliminates:
- *  - Type.Module
- *  - Op.Module
- *  - Defn.Module
  */
 class ModuleLowering(implicit top: Top, fresh: Fresh) extends Pass {
   override def preDefn = {
-    case Defn.Module(attrs, name @ ClassRef(cls), parent, ifaces) =>
-      val clsName = name tag "module"
-      val clsDefn = Defn.Class(attrs, name tag "module", parent, ifaces)
+    case Defn.Module(attrs, clsName @ ClassRef(cls), parent, ifaces) =>
+      val clsDefn = Defn.Class(attrs, clsName, parent, ifaces)
       val clsTy   = Type.Class(clsName)
       val clsNull = Val.Zero(clsTy)
 
-      val valueName = name tag "value"
+      val valueName = clsName tag "value"
       val valueDefn = Defn.Var(Attrs.None, valueName, clsTy, clsNull)
       val value     = Val.Global(valueName, Type.Ptr)
 
@@ -63,49 +57,43 @@ class ModuleLowering(implicit top: Top, fresh: Fresh) extends Pass {
       val cond  = Val.Local(fresh(), Type.Bool)
       val alloc = Val.Local(fresh(), clsTy)
 
-      val initCall =
-        if (isStaticModule(name)) Seq()
-        else {
-          val initSig = Type.Function(Seq(Arg(Type.Class(name))), Type.Void)
-          val init    = Val.Global(name member "init", Type.Ptr)
+      val initCall = if (isStaticModule(clsName)) {
+        Inst.None
+      } else {
+        val initSig = Type.Function(Seq(Arg(Type.Class(clsName))), Type.Void)
+        val init    = Val.Global(clsName member "init", Type.Ptr)
 
-          Seq(Inst(Op.Call(initSig, init, Seq(alloc))))
-        }
+        Inst.Let(Op.Call(initSig, init, Seq(alloc)))
+      }
 
-      val loadName = name tag "load"
+      val loadName = clsName tag "load"
       val loadSig  = Type.Function(Seq(), clsTy)
       val loadDefn = Defn.Define(
-          Attrs.None,
-          loadName,
-          loadSig,
-          Seq(Block(entry,
-                    Seq(),
-                    Seq(
-                        Inst(self.name, Op.Load(clsTy, value)),
-                        Inst(cond.name,
-                             Op.Comp(Comp.Ine, Rt.Object, self, clsNull))
-                    ),
-                    Cf.If(cond, Next(existing), Next(initialize))),
-              Block(existing, Seq(), Seq(), Cf.Ret(self)),
-              Block(initialize,
-                    Seq(),
-                    Seq(
-                        Seq(Inst(alloc.name, Op.Classalloc(clsName))),
-                        Seq(Inst(Op.Store(clsTy, value, alloc))),
-                        initCall
-                    ).flatten,
-                    Cf.Ret(alloc))))
+        Attrs.None,
+        loadName,
+        loadSig,
+        Seq(Inst.Label(entry, Seq()),
+            Inst.Let(self.name, Op.Load(clsTy, value)),
+            Inst.Let(cond.name, Op.Comp(Comp.Ine, Rt.Object, self, clsNull)),
+            Inst.If(cond, Next(existing), Next(initialize)),
+            Inst.Label(existing, Seq()),
+            Inst.Ret(self),
+            Inst.Label(initialize, Seq()),
+            Inst.Let(alloc.name, Op.Classalloc(clsName)),
+            Inst.Let(Op.Store(clsTy, value, alloc)),
+            initCall,
+            Inst.Ret(alloc)))
 
       Seq(clsDefn, valueDefn, loadDefn)
   }
 
   override def preInst = {
-    case Inst(n, Op.Module(name)) =>
-      val loadSig = Type.Function(Seq(), Type.Class(name tag "module"))
+    case Inst.Let(n, Op.Module(name)) =>
+      val loadSig = Type.Function(Seq(), Type.Class(name))
       val load    = Val.Global(name tag "load", Type.Ptr)
 
       Seq(
-          Inst(n, Op.Call(loadSig, load, Seq()))
+        Inst.Let(n, Op.Call(loadSig, load, Seq()))
       )
   }
 
