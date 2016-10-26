@@ -544,10 +544,20 @@ class File private () extends Serializable with Comparable[File] {
         return true
     }
 
-    def lastMofified(): Long = ???
+    def lastMofified(): Long = {
+        val result: Long = lastModifiedImpl(properPath(true))
+        result match{
+            case 0 => 0
+            case -1 => 0
+            case _ => result
+        }
+    }
 
     //native funct.
-    private def lastModifiedImpl(filePath: Array[Byte]): Long = ???
+    private def lastModifiedImpl(filePath: Array[Byte]): Long = {
+        var pathCopy: CString = filePathCopy(filePath)
+        return CFile.lastmod(pathCopy)
+    }
 
     def setLastMofified(time: Long): Boolean = ???
 
@@ -713,6 +723,7 @@ class File private () extends Serializable with Comparable[File] {
     def getUserDir(): CString = extern
     def new_file_impl(path: CString): CInt = extern
     def fileDescriptor_close(fd: CInt): CInt = extern
+    def lastmod(path: CString): CSize = extern
 }
 
     //C function utilized to remove the file.
