@@ -518,7 +518,31 @@ class File private () extends Serializable with Comparable[File] {
         return (unistd.access(pathCopy, 4 /* R_OK */) !=0)
     }
     //native funct.
-    private def getLinkImpl(filePath: Array[Byte]): Array[Byte] = ???
+    private def getLinkImpl(filePath: Array[Byte]): Array[Byte] = {
+        var answer: Array[Byte] = null
+        var pathCopy: CString = filePathCopy(filePath)
+        if(platformReadLink(pathCopy)){
+            //need to transform pathCopy into an Array of byte
+            val length: CSize = strlen(pathCopy)
+            answer = new Array[Byte](length.toInt)
+            var index: Int = 0
+            while(index < length){
+                answer(index) = pathCopy(index)
+                index += 1
+            }
+        }else{
+            answer = filePath
+        }
+        return answer;
+    }
+
+    //scala way to write the C function platformReadLink(char*) in hyfile.c
+    private def platformReadLink(link: CString): Boolean = {
+        val size: CInt = unistd.readlink(link, link, HyMaxPath-1);
+        if (size <= 0) return false
+        link(size) = 0
+        return true
+    }
 
     def lastMofified(): Long = ???
 
@@ -695,6 +719,7 @@ class File private () extends Serializable with Comparable[File] {
 @extern object unistd{
     def unlink(path: CString): CInt = extern
     def access(pathname: CString, mode: CInt): CInt = extern
+    def readlink(path: CString, buf: CString, bufsize: CSize) = extern
 }
 
 @extern object apr_time{
@@ -862,7 +887,7 @@ private def writeObject(stream: ObjectOutputStream): Unit */
 
 /*@throws(classOf[IOException])
 @throws(classOf[ClassNotFoundException])
-private def readObject(stream: ObjectInputStream): Unit = ???*/
+private def readObject(stream: ObjectInputStream): Unit */
 
 //def toURI(): URI
 
