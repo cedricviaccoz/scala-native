@@ -485,7 +485,22 @@ class File private () extends Serializable with Comparable[File] {
                               else isHiddenImpl(properPath(true))
 
     //native funct.
-    private def isHiddenImpl(filePath: Array[Byte]): Boolean = ???
+    private def isHiddenImpl(filePath: Array[Byte]): Boolean = {
+        var pathCopy: CString = filePathCopy(filePath)
+        val length: CSize = strlen(path) 
+        val existsResult: CInt = CFile.file_attr(path)
+
+          if (existsResult < 0) return false
+          if (length == 0) return true
+
+          for ( index <- length to 0 by -1){
+              if (path(index) == '.' && (index > 0 && (path(index - 1) == '/')))
+                return true
+            }
+
+          return false
+        }
+    }
 
     //native funct.
     private def isReadOnlyImpl(filePath: Array[Byte]): Boolean = ???
