@@ -487,27 +487,36 @@ class File private () extends Serializable with Comparable[File] {
     //native funct.
     private def isHiddenImpl(filePath: Array[Byte]): Boolean = {
         var pathCopy: CString = filePathCopy(filePath)
-        val length: CSize = strlen(path) 
-        val existsResult: CInt = CFile.file_attr(path)
-
-          if (existsResult < 0) return false
-          if (length == 0) return true
-
-          for ( index <- length to 0 by -1){
-              if (path(index) == '.' && (index > 0 && (path(index - 1) == '/')))
-                return true
-            }
-
-          return false
+        val length: CSize = strlen(pathCopy)
+        val existsResult: CInt = CFile.file_attr(pathCopy)
+        if (existsResult < 0) return false
+        if (length == 0) return true
+        var index: Long = length
+        while(index >= 0) {
+          if (pathCopy(index) == '.' && (index > 0 && (pathCopy(index - 1) == '/')))
+            return true
+          index -= 1
         }
+        return false
+    }
+
+    /*
+    #define R_OK    4
+    #define W_OK    2
+    #define X_OK    1
+    #define F_OK    0
+    */
+    //native funct.
+    private def isReadOnlyImpl(filePath: Array[Byte]): Boolean = {
+        val pathCopy: CString = filePathCopy(filePath)
+        return (unistd.access(pathCopy, 2 /* W_OK */) !=0)
     }
 
     //native funct.
-    private def isReadOnlyImpl(filePath: Array[Byte]): Boolean = ???
-
-    //native funct.
-    private def isWriteOnlyImpl(filePath: Array[Byte]): Boolean = ???
-
+    private def isWriteOnlyImpl(filePath: Array[Byte]): Boolean = {
+        val pathCopy: CString = filePathCopy(filePath)
+        return (unistd.access(pathCopy, 4 /* R_OK */) !=0)
+    }
     //native funct.
     private def getLinkImpl(filePath: Array[Byte]): Array[Byte] = ???
 
@@ -663,6 +672,8 @@ class File private () extends Serializable with Comparable[File] {
     //C function utilized to remove the file.
 @extern object unistd{
     def unlink(path: CString): CInt = extern
+    def access(pathname: CString, mode: CInt): CInt = extern
+
 }
 
 @extern object apr_time{
