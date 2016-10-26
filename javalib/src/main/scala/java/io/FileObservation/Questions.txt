@@ -12,3 +12,9 @@ My way to handle break instruction is by making break an Exception I'm launching
 
 -
 How to use function pointer ?
+
+-
+The whole "apr_time.h" problem and its relation to System.currentTimeMillis
+
+-
+My c functions doesn't seem to be ported 
