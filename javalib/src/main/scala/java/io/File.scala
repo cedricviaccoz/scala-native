@@ -46,7 +46,7 @@ class File private () extends Serializable with Comparable[File] {
     		var separatorIndex: Int = 0;
 
     		while(separatorIndex < name.length() && 
-    			name(separatorIndex) == separatorChar){
+    			name(separatorIndex) == File.separatorChar){
     			separatorIndex += 1
     		}
 
@@ -55,9 +55,9 @@ class File private () extends Serializable with Comparable[File] {
     		}
 
     		val pathLength: Int = path.length()
-    		if(pathLength > 0 && path(pathLength-1) == separatorChar){
+    		if(pathLength > 0 && path(pathLength-1) == File.separatorChar){
     			path + name
-    		} else path + separatorChar + name
+    		} else path + File.separatorChar + name
     	}
     	else path
     }
@@ -66,7 +66,7 @@ class File private () extends Serializable with Comparable[File] {
         var uncIndex: Int = 1
         var length: Int = origPath.length() 
         var newLength: Int = 0
-        if (separatorChar == '/') {
+        if (File.separatorChar == '/') {
             uncIndex = 0;
         } else if (length > 2 && origPath.charAt(1) == ':') {
             uncIndex = 2;
@@ -76,20 +76,20 @@ class File private () extends Serializable with Comparable[File] {
         var newPath: Array[Char] = origPath.toCharArray()
         for(i <- 0 until length) {
             var pathChar: Char = newPath(i)
-            if ((separatorChar == '\\') && (pathChar == '\\')
+            if ((File.separatorChar == '\\') && (pathChar == '\\')
                 || (pathChar == '/')) {
                 /* UNC Name requires 2 leading slashes */
                 if ((foundSlash && (i == uncIndex)) || !foundSlash) {
                     newLength += 1
-                    newPath(newLength) = separatorChar
+                    newPath(newLength) = File.separatorChar
                     foundSlash = true
                 }
             } else {
                 // check for leading slashes before a drive
                 if ((pathChar == ':')
                         && (uncIndex > 0)
-                        && ((newLength == 2) || ((newLength == 3) && (newPath(1) == separatorChar)))
-                        && (newPath(0) == separatorChar)) {
+                        && ((newLength == 2) || ((newLength == 3) && (newPath(1) == File.separatorChar)))
+                        && (newPath(0) == File.separatorChar)) {
                     newPath(0) = newPath(newLength - 1)
                     newLength = 1
                     // allow trailing slash after drive letter
@@ -102,7 +102,7 @@ class File private () extends Serializable with Comparable[File] {
         }
         // remove trailing slash
         if (foundSlash
-                && (newLength > (uncIndex + 1) || (newLength == 2 && newPath(0) != separatorChar))) {
+                && (newLength > (uncIndex + 1) || (newLength == 2 && newPath(0) != File.separatorChar))) {
             newLength -= 1
         }
         return new String(newPath, 0, newLength)
@@ -209,7 +209,7 @@ class File private () extends Serializable with Comparable[File] {
         if (canonPath != null) {
             return canonPath
         }
-        if(separatorChar == '/') {
+        if(File.separatorChar == '/') {
             // resolve the full path first
             result = resolveLink(result, result.length, false)
             // resolve the parent directories
@@ -217,13 +217,13 @@ class File private () extends Serializable with Comparable[File] {
         }
         var numSeparators: Int = 1;
         for (i <- 0 until result.length) {
-            if (result(i) == separatorChar) {
+            if (result(i) == File.separatorChar) {
                 numSeparators += 1
             }
         }
         var sepLocations: Array[Int] = new Array[Int](numSeparators)
         var rootLoc: Int = 0
-        if (separatorChar != '/') {
+        if (File.separatorChar != '/') {
             if (result(0) == '\\') {
                 rootLoc = if(result.length > 1 && result(1) == '\\') 1 else 0
             } else {
@@ -242,7 +242,7 @@ class File private () extends Serializable with Comparable[File] {
                     newLength += 1
                     newResult(newLength) = result(i)
                 } else {
-                    if (i == result.length || result(i) == separatorChar) {
+                    if (i == result.length || result(i) == File.separatorChar) {
                         if (i == result.length && foundDots == 0) {
                             throw Break
                         }
@@ -261,7 +261,7 @@ class File private () extends Serializable with Comparable[File] {
                         lastSlash += 1
                         sepLocations(lastSlash) = newLength
                         newLength += 1
-                        newResult(newLength) = separatorChar.toByte
+                        newResult(newLength) = File.separatorChar.toByte
                     }
                     if (result(i) == '.') {
                         foundDots += 1
@@ -286,7 +286,7 @@ class File private () extends Serializable with Comparable[File] {
         def endOfFunct: String = {
             // remove trailing slash
             if(newLength > (rootLoc + 1)
-                    && newResult(newLength - 1) == separatorChar) {
+                    && newResult(newLength - 1) == File.separatorChar) {
                 newLength -= 1
             }
             newResult(newLength) = 0
@@ -315,7 +315,7 @@ class File private () extends Serializable with Comparable[File] {
         //prev. unintialized
         var inPlace: Boolean = false
         for (i <- 1 to newResult.length) {
-            if (i == newResult.length || newResult(i) == separatorChar) {
+            if (i == newResult.length || newResult(i) == File.separatorChar) {
                 done = (i >= (newResult.length - 1))
                 // if there is only one segment, do nothing
                 if (done && linkPath.length == 1) {
@@ -333,7 +333,7 @@ class File private () extends Serializable with Comparable[File] {
                 } else {
                     nextSize = i - last + 1
                     linkSize = linkPath.length
-                    if (linkPath(linkSize - 1) == separatorChar) {
+                    if (linkPath(linkSize - 1) == File.separatorChar) {
                         linkSize -= 1
                     }
                     bytes = new Array[Byte](linkSize + nextSize)
@@ -373,14 +373,14 @@ class File private () extends Serializable with Comparable[File] {
                 if (linkBytes == pathBytes) {
                     throw Break
                 }
-                if (linkBytes(0) == separatorChar) {
+                if (linkBytes(0) == File.separatorChar) {
                     // link to an absolute path, if resolving absolute paths,
                     // resolve the parent dirs again
                     restart = resolveAbsolute
                     pathBytes = linkBytes
                 } else {
                     var last: Int = length - 1;
-                    while (pathBytes(last) != separatorChar) {
+                    while (pathBytes(last) != File.separatorChar) {
                         last -= 1
                     }
                     last += 1
@@ -413,14 +413,15 @@ class File private () extends Serializable with Comparable[File] {
 
     def getParent(): String = {
         val length: Int = path.length()
-        if(separatorChar == '\\' && length > 2 && path(1) == ':'){
+        var firstInPath: Int = 0
+        if(File.separatorChar == '\\' && length > 2 && path(1) == ':'){
             firstInPath = 2
         }
-        var index: Int = path.lastIndexOf(separatorChar)
+        var index: Int = path.lastIndexOf(File.separatorChar)
         if(index == -1 && firstInPath > 0) index = 2
-        if(index == -1 || path(length -1) == separatorChar) return null
-        if(path.indexOf(separatorChar) == index 
-            && path(firstInPath) == separatorChar) return path.substring(0, index+1)
+        if(index == -1 || path(length -1) == File.separatorChar) return null
+        if(path.indexOf(File.separatorChar) == index 
+            && path(firstInPath) == File.separatorChar) return path.substring(0, index+1)
         return path.substring(0, index)
     }
 
@@ -441,8 +442,8 @@ class File private () extends Serializable with Comparable[File] {
                 return true
             }
             if (path.length() > 2) {
-                if ((path.charAt(0).isLetter() && path(1) == ':'
-                        && (path(2) == '/' || path(2) == '\\')) {
+                if ((path(0).isLetter && (path(1) == ':') 
+                    && (path(2) == '/' || path(2) == '\\'))) {
                     return true
                 }
             }
@@ -463,7 +464,7 @@ class File private () extends Serializable with Comparable[File] {
     //native funct.
     private def isDirectoryImpl(filePath: Array[Byte]): Boolean = {
         var pathCopy: CString = filePathCopy(filePath)
-        return (file_attr(pathCopy) == 0)
+        return (CFile.file_attr(pathCopy) == 0)
     }
 
     def isFile(): Boolean = {
@@ -475,15 +476,13 @@ class File private () extends Serializable with Comparable[File] {
 
 
     //native funct.
-    private def isFileImpl(filePath: Array[Byte]) = {
+    private def isFileImpl(filePath: Array[Byte]): Boolean = {
         var pathCopy: CString = filePathCopy(filePath)
-        return (file_attr(pathCopy) == 1)
+        return (CFile.file_attr(pathCopy) == 1)
     }
 
-    def isHidden(): Boolean = {
-        var pathCopy: CString = filePathCopy(filePath)
-        return (file_attr(pathCopy) == 1)
-    }
+    def isHidden(): Boolean = if(path.length() == 0) false 
+                              else isHiddenImpl(properPath(true))
 
     //native funct.
     private def isHiddenImpl(filePath: Array[Byte]): Boolean = ???
@@ -559,12 +558,16 @@ class File private () extends Serializable with Comparable[File] {
     //native funct.
     @throws(classOf[IOException])
     private def newFileImpl(filePath: Array[Byte]): Int = {
-        var pathCopy = filePathCopy(filePath)
-        val portFD: CInt = new_file_impl(pathCopy)
+        val pathCopy: CString = filePathCopy(filePath)
+        val portFD: CInt = CFile.new_file_impl(pathCopy)
         if(portFD == -1){
-            if(new File(filePath).exits()) 1 else 2
+//TODO:
+            //should find a way to treat the case of 
+            //the file can't be created because it alread exists
+            //return 2 in this case
+            return 1
         }
-        fileDescriptor_close(portFD)
+        CFile.fileDescriptor_close(portFD)
         return 0
     }
 
@@ -605,11 +608,11 @@ class File private () extends Serializable with Comparable[File] {
 
         // Handle separator
         var result: String = userdir;
-        if (userdir(length - 1) != separatorChar) {
-            if (path(0) != separatorChar) {
+        if (userdir(length - 1) != File.separatorChar) {
+            if (path(0) != File.separatorChar) {
                 result += separator;
             }
-        } else if (path(0) == separatorChar) {
+        } else if (path(0) == File.separatorChar) {
             result = result.substring(0, length - 2);
 
         }
@@ -629,7 +632,6 @@ class File private () extends Serializable with Comparable[File] {
 
 }
 
-
     //c file can be found in scala-native/nativelib/src/main/resources/
 @extern object CFile{
     def separatorChar(): Char = extern
@@ -639,8 +641,8 @@ class File private () extends Serializable with Comparable[File] {
     def file_attr(path: CString): Int = extern
     def getOsEncoding(): CString = extern
     def getUserDir(): CString = extern
-    def new_file_impl(): CInt = extern
-    def fileDescriptor_close(): CInt = extern
+    def new_file_impl(path: CString): CInt = extern
+    def fileDescriptor_close(fd: CInt): CInt = extern
 }
 
     //C function utilized to remove the file.
@@ -648,17 +650,22 @@ class File private () extends Serializable with Comparable[File] {
     def unlink(path: CString): CInt = extern
 }
 
+@extern object apr_time{
+    def apr_time_now(): Long = extern
+}
+
 //implementation of the few used methods from
 //org.apache.harmony.luni.internal.io.FileCanonPathCache
 object FileCanonPathCache {
-    private class CacheElement() {
-        var canonicalPath: String
-        var timestamp: Long 
+
+    private class CacheElement private () {
+        var canonicalPath: String = _
+        var timestamp: Long = _    
         
         def this(canonPath: String) = {
             this()
             canonicalPath = canonPath
-            timestamp = System.currentTimeMillis()
+            timestamp = apr_time.apr_time_now()
         }
     }
 
@@ -701,7 +708,7 @@ object FileCanonPathCache {
             return null
         }
 
-        var time: Long = System.currentTimeMillis();
+        var time: Long = apr_time.apr_time_now();
         if (time - element.timestamp > localTimeout) {
             // remove all elements older than this one
             synchronized /* (lock) */ {
