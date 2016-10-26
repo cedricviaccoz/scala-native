@@ -157,14 +157,14 @@ class File private () extends Serializable with Comparable[File] {
      */
     @throws(classOf[IOException])
     private def filePathCopy(filePath: Array[Byte]): CString = {
-        var pathCopy: CString = stackalloc[CChar](HyMaxPath)
+        val pathCopy: CString = stackalloc[CChar](HyMaxPath)
         val length: Int = filePath.length
         if(length > (HyMaxPath-1)){
             throw new IOException("Path length of "+length+" characters exceeds maximum supported length of "+HyMaxPath)
         }else{  
             for(i <- 0 until length){
                     pathCopy(i) = filePath(i)
-                }
+            }
             pathCopy(length) = '\0'   
             return pathCopy
         }
@@ -645,10 +645,20 @@ class File private () extends Serializable with Comparable[File] {
         return properPath
     }
 
-    def renameTo(des: java.io.File): Boolean = ???
+    def renameTo(des: java.io.File): Boolean = 
+        renameToImpl(properPath(true), des.properPath(true))
 
     //native funct.
-    private def renameToImpl(pathExists: Array[Byte], pathNew: Array[Byte]): Boolean = ???
+    private def renameToImpl(pathExists: Array[Byte], pathNew: Array[Byte]): Boolean = {
+        //not actually sure it does rename anything even though I followed
+        //the Java and C code.
+        val oldPathCopy: CString = filePathCopy(pathExists)
+        val newPathCopy: CString = filePathCopy(pathNew)
+        rename(oldPathCopy, newPathCopy) match{
+            case 0 => true
+            case -1 => false
+        }
+    }
 
     override def toString(): String = path
 
@@ -665,6 +675,7 @@ class File private () extends Serializable with Comparable[File] {
             name = name.replace(File.separatorChar, '/')
         }
         return name;
+    }
 }
 
     //c file can be found in scala-native/nativelib/src/main/resources/
@@ -684,7 +695,6 @@ class File private () extends Serializable with Comparable[File] {
 @extern object unistd{
     def unlink(path: CString): CInt = extern
     def access(pathname: CString, mode: CInt): CInt = extern
-
 }
 
 @extern object apr_time{
