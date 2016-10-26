@@ -41,8 +41,8 @@ int new_file_impl(const char * path){
   return (int) fd;
 }
 
-int filedescriptor_close(int fd){
-  
+int fileDescriptor_close(int fd){
+
 #if (FD_BIAS != 0)
     if (fd < FD_BIAS) {
         /* Cannot close STD streams, and no other FD's should exist <FD_BIAS */
@@ -123,6 +123,7 @@ const char * getUserDir(){
 int main(void){
   printf("OS encoding is %s\n", getOsEncoding());
   printf("UserDir is %s\n", getUserDir());
+  printf("Current time is %ld", (long) apr_time_now())
   return 0;
 }
 #endif
