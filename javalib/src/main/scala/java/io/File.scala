@@ -652,8 +652,19 @@ class File private () extends Serializable with Comparable[File] {
 
     override def toString(): String = path
 
-    def getAbsoluteName(): String = ???
+    def getAbsoluteName(): String = {
+        val f: File = getAbsoluteFile()
+        var name: String = f.getPath()
 
+        if (f.isDirectory() && name(name.length() - 1) != File.separatorChar) {
+            // Directories must end with a slash
+            name = new StringBuilder(name.length() + 1).append(name)
+                    .append('/').toString()
+        }
+        if (File.separatorChar != '/') { // Must convert slashes.
+            name = name.replace(File.separatorChar, '/')
+        }
+        return name;
 }
 
     //c file can be found in scala-native/nativelib/src/main/resources/
