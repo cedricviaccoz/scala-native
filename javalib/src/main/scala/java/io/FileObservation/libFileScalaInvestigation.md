@@ -2,6 +2,15 @@
 
 this document is kind of a personal journal of my investigation of the native code called by the library File.java, so I don't forget what each method does and what each macros means. 
 
+## System.currentTimeMillis() 
+
+its implementation is simply return VMExecutionEngine.currentTimeMillis()
+which is in turn just a native call to currentTimeMillis() (which return long)
+which can be found in : ```/harmony/drlvm/vm/vmcore/src/kernel_classes/native/java_lang_VMExecutionEngine.cpp```
+which method implementation is just a ```return apr_time_now();``` which comes from package apr_time.h.
+Solved I think
+
+
 ## native newFileImpl
 ```
 JNIEXPORT jint JNICALL
