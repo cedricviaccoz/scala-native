@@ -606,7 +606,14 @@ class File private () extends Serializable with Comparable[File] {
 
     }
 
-    def mkdirs(): Boolean = ???
+    def mkdirs(): Boolean = {
+        if(exists()) return false
+        if(mkdir()) return true
+        val parentDir: String = getParent()
+
+        if(parentDir == null) return false
+        return (new File(parentDir).mkdirs() && mkdir())
+    }
 
     @throws(classOf[IOException])
     def createNewFile(): Boolean = {
