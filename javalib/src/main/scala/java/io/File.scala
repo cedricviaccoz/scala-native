@@ -553,11 +553,21 @@ class File private () extends Serializable with Comparable[File] {
         return CFile.lastmod(pathCopy)
     }
 
-    def setLastMofified(time: Long): Boolean = ???
+    def setLastMofified(time: Long): Boolean = {
+        //message corresponding to luni.B2 from apache messages.properties 
+        if (time < 0) throw new IllegalArgumentException("time must be positive")
+        return (setLastModifiedImpl(properPath(true), time));
+    }
 
     //native funct.
     private def setLastModifiedImpl(filePath: Array[Byte], 
-                                    time: Long): Boolean = ???
+                                    time: Long): Boolean = {
+        var pathCopy: CString = filePathCopy(filePath)
+        CFile.setlastmod(pathCopy, time) match{
+            case 0 => false
+            case 1 => true 
+        }   
+    }
 
     def setReadOnly(): Boolean = setReadOnlyImpl(properPath(true))
 
@@ -603,7 +613,6 @@ class File private () extends Serializable with Comparable[File] {
     private def mkdirImpl(filePath: Array[Byte]): Boolean = {
         val pathCopy: CString = filePathCopy(filePath)
         CFile.file_mkdir(pathCopy) == 0
-
     }
 
     def mkdirs(): Boolean = {
@@ -745,6 +754,7 @@ class File private () extends Serializable with Comparable[File] {
     def file_length(path: CString): Long = extern
     def file_mkdir(path: CString): Int = extern
     def setReadOnlyNative(path: CString): Int = extern
+    def setlastmod(path: CString, time: Long): Int = extern
 }
 
     //C function utilized to remove the file.
