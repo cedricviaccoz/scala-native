@@ -150,7 +150,7 @@ class File private () extends Serializable with Comparable[File] {
     }
 
     /*
-     *Small utilitary function to achieve modularity
+     *Small utilitary function to achieve modularity.
      *transform an Array of Byte to a CString 
      *add the null terminating char at the end.
      * can throw an IO exception if the path is too long
@@ -500,22 +500,16 @@ class File private () extends Serializable with Comparable[File] {
         return false
     }
 
-    /*
-    #define R_OK    4
-    #define W_OK    2
-    #define X_OK    1
-    #define F_OK    0
-    */
     //native funct.
     private def isReadOnlyImpl(filePath: Array[Byte]): Boolean = {
         val pathCopy: CString = filePathCopy(filePath)
-        return (unistd.access(pathCopy, 2 /* W_OK */) !=0)
+        return (unistd.access(pathCopy, fcntl.W_OK) !=0)
     }
 
     //native funct.
     private def isWriteOnlyImpl(filePath: Array[Byte]): Boolean = {
         val pathCopy: CString = filePathCopy(filePath)
-        return (unistd.access(pathCopy, 4 /* R_OK */) !=0)
+        return (unistd.access(pathCopy, fcntl.R_OK) !=0)
     }
     //native funct.
     private def getLinkImpl(filePath: Array[Byte]): Array[Byte] = {
@@ -570,10 +564,16 @@ class File private () extends Serializable with Comparable[File] {
     //native funct.
     def setReadOnlyImpl(path: Array[Byte]): Boolean = ???
 
-    def length(): Long = ???
+    def length(): Long = lengthImpl(properPath(true))
 
     //native funct.
-    private def lengthImpl(filePath: Array[Byte]): Long = ???
+    private def lengthImpl(filePath: Array[Byte]): Long = {
+        val pathCopy: CString = filePathCopy(filePath)
+        val result: Long = CFile.file_length(pathCopy)
+        if(result < 0){
+            return 0L
+        }else return result
+    }
 
     def list(): Array[java.lang.String] = ???
 
@@ -590,10 +590,14 @@ class File private () extends Serializable with Comparable[File] {
         ???
     }
 
-    def mkdir(): Boolean = ???
+    def mkdir(): Boolean = mkdirImpl(properPath(true))
 
     //native funct.
-    private def mkdirImpl(filePath: Boolean): Boolean = ???
+    private def mkdirImpl(filePath: Array[Byte]): Boolean = {
+        val pathCopy: CString = filePathCopy(filePath)
+        CFile.file_mkdir(pathCopy) == 0
+
+    }
 
     def mkdirs(): Boolean = ???
 
@@ -724,6 +728,8 @@ class File private () extends Serializable with Comparable[File] {
     def new_file_impl(path: CString): CInt = extern
     def fileDescriptor_close(fd: CInt): CInt = extern
     def lastmod(path: CString): CSize = extern
+    def file_length(path: CString): Long = extern
+    def file_mkdir(path: CString): Int = extern
 }
 
     //C function utilized to remove the file.
@@ -731,6 +737,13 @@ class File private () extends Serializable with Comparable[File] {
     def unlink(path: CString): CInt = extern
     def access(pathname: CString, mode: CInt): CInt = extern
     def readlink(path: CString, buf: CString, bufsize: CSize) = extern
+}
+
+/*@extern*/  object fcntl{
+    val W_OK: Int = 2
+    val R_OK: Int = 4
+    val X_OK: Int = 1
+    val F_OK: Int = 0
 }
 
 @extern object apr_time{
@@ -868,7 +881,7 @@ object File{
         return answer
     }
 
-    //REQUIRE TESTING !
+
     def listRoots(): Array[File] = {
        val rootsList: Array[String] = rootsImpl()
 
@@ -877,7 +890,8 @@ object File{
     }
 
     @throws(classOf[IOException])
-    def createTempFile(prefix: String, suffix: String): File = ???
+    def createTempFile(prefix: String, suffix: String): File = 
+        createTempFile(prefix, suffix, null)
 
     @throws(classOf[IOException])
     def createTempFile(prefix: String, 
