@@ -7,6 +7,7 @@
 #include <limits.h>
 #include <fcntl.h> // for open
 #include <stdint.h> // for int32_t
+#include <time.h> // for tzet()
 
 //values chosen accordingly to the corresponding HyIsFile and HyIsDir in harmony
 #define isDir 0 
@@ -15,6 +16,7 @@
 
 #define newFilImplFlag (O_TRUNC | O_CREAT | O_EXCL | O_RDWR)
 #define newFileImplMode 0666
+
 #ifdef ZOS
 #define FD_BIAS 1000
 #undef fwrite
@@ -23,7 +25,39 @@
 #define FD_BIAS 0
 #endif /* ZOS */
 
-#define TEST
+
+
+//#define TEST
+
+int file_mkdir(const char * path){
+  if (-1 == mkdir (path, S_IRWXU | S_IRWXG | S_IRWXO))
+    {
+      return -1;
+    }
+    return 0;
+}
+
+int64_t file_length(const char * path){
+  struct stat st;
+
+  if(stat(path, &st)){
+    return -1;
+  }
+  return (int64_t) st.st_size;
+}
+
+uint64_t lastmod(const char * path){
+  struct stat st;
+  tzset();
+
+
+  if (stat (path, &st))
+    {
+      return -1;
+    }
+  return (uint64_t)st.st_mtime * 1000;
+}
+
 
 /*this is a reimplementation of hyfile_open,
   with all of its parameter and branches simplified
@@ -123,7 +157,7 @@ const char * getUserDir(){
 int main(void){
   printf("OS encoding is %s\n", getOsEncoding());
   printf("UserDir is %s\n", getUserDir());
-  printf("Current time is %ld", (long) apr_time_now())
+  printf("Current time is %ld", (long) apr_time_now());
   return 0;
 }
 #endif
