@@ -17,4 +17,5 @@ How to use function pointer ?
 The whole "apr_time.h" problem and its relation to System.currentTimeMillis
 
 -
-My c functions doesn't seem to be ported 
+My c functions doesn't seem to be ported (reference the whole trying to test problem) do I need to put a .h ?
+
