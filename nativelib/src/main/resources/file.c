@@ -8,6 +8,7 @@
 #include <fcntl.h> // for open
 #include <stdint.h> // for int32_t
 #include <time.h> // for tzet()
+#include <utime.h>
 
 //values chosen accordingly to the corresponding HyIsFile and HyIsDir in harmony
 #define isDir 0 
@@ -26,9 +27,20 @@
 #endif /* ZOS */
 
 
-
 //#define TEST
 
+int setlastmod(char *path, int64_t time)
+{
+  struct stat statbuf;
+  struct utimbuf timebuf;
+  if (stat(path, &statbuf)){
+      return 0;  
+  }
+  timebuf.actime = statbuf.st_atime;
+  timebuf.modtime = (time_t) (time / 1000);
+  return utime (path, &timebuf) == 0;
+
+}
 
 int setReadOnlyNative(char * path)
 {
