@@ -559,10 +559,17 @@ class File private () extends Serializable with Comparable[File] {
     private def setLastModifiedImpl(filePath: Array[Byte], 
                                     time: Long): Boolean = ???
 
-    def setReadOnly(): Boolean = ???
+    def setReadOnly(): Boolean = setReadOnlyImpl(properPath(true))
 
     //native funct.
-    def setReadOnlyImpl(path: Array[Byte]): Boolean = ???
+    def setReadOnlyImpl(path: Array[Byte]): Boolean = {
+        var pathCopy: CString = filePathCopy(path)
+        CFile.setReadOnlyNative(pathCopy) match{
+            case 0 => false
+            case 1 => true
+        }
+
+    }
 
     def length(): Long = lengthImpl(properPath(true))
 
@@ -730,6 +737,7 @@ class File private () extends Serializable with Comparable[File] {
     def lastmod(path: CString): CSize = extern
     def file_length(path: CString): Long = extern
     def file_mkdir(path: CString): Int = extern
+    def setReadOnlyNative(path: CString): Int = extern
 }
 
     //C function utilized to remove the file.
