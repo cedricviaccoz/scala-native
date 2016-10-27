@@ -29,6 +29,20 @@
 
 //#define TEST
 
+
+int setReadOnlyNative(char * path)
+{
+  struct stat buffer;
+  mode_t mode;
+  if (stat (path, &buffer))
+    {
+      return 0;
+    }
+  mode = buffer.st_mode;
+  mode = mode & 07555;
+  return chmod (path, mode) == 0;
+}
+
 int file_mkdir(const char * path){
   if (-1 == mkdir (path, S_IRWXU | S_IRWXG | S_IRWXO))
     {
