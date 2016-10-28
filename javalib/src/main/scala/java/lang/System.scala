@@ -3,6 +3,7 @@ package java.lang
 import java.io.{InputStream, PrintStream}
 import java.util.Properties
 import scala.scalanative.native._
+import scala.scalanative.apr.apr_time
 
 final class System private ()
 
@@ -22,13 +23,16 @@ object System {
   def identityHashCode(x: Object): scala.Int =
     x.cast[Word].hashCode
 
+  
+
   def getenv(name: String): String                      = ???
   def clearProperty(key: String): String                = ???
   def getProperties(): Properties                       = ???
   def getProperty(key: String): String                  = ???
   def getProperty(key: String, default: String): String = ???
   def setProperty(key: String, value: String): String   = ???
-  def currentTimeMillis(): Long = 
+
+  def currentTimeMillis(): Long = apr_time_now()
 
   var in: InputStream  = _
   var out: PrintStream = new PrintStream(new CFileOutputStream(stdio.stdout))
