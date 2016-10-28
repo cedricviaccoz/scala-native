@@ -28,6 +28,7 @@ object System {
   def getProperty(key: String): String                  = ???
   def getProperty(key: String, default: String): String = ???
   def setProperty(key: String, value: String): String   = ???
+  def currentTimeMillis(): Long = 
 
   var in: InputStream  = _
   var out: PrintStream = new PrintStream(new CFileOutputStream(stdio.stdout))
