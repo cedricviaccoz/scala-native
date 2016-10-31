@@ -1,8 +1,9 @@
 package scala.scalanative
 package posix
 
-import scala.scalanative.native.{struct, extern, Ptr}
+import scala.scalanative.native.{struct, extern, Ptr, name}
 
+@name("sys/time")
 @extern
 object time {
 
