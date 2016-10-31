@@ -3,7 +3,7 @@ package java.lang
 import java.io.{InputStream, PrintStream}
 import java.util.Properties
 import scala.scalanative.native._
-import scala.scalanative.apr._
+import scala.scalanative.posix._
 
 final class System private ()
 
@@ -32,7 +32,12 @@ object System {
   def getProperty(key: String, default: String): String = ???
   def setProperty(key: String, value: String): String   = ???
 
-  def currentTimeMillis(): Long = apr_time.apr_time_now()
+  def currentTimeMillis(): Long = {
+    val tv: Ptr[time.timeval] = stackalloc[time.timeval](1)
+    time.gettimeofday(tv, null)
+    return ((!tv).tv_sec*1000 + (!tv).tv_usec/1000).toLong
+
+  }
 
   var in: InputStream  = _
   var out: PrintStream = new PrintStream(new CFileOutputStream(stdio.stdout))
