@@ -28,7 +28,7 @@ object CFile{
     @name("scalanative_last_mod")
     def lastModNative(path: CString): CSize = extern
 
-    @name("scalanative_new_file_impl")
+    @name("scalanative_file_open")
     def newFileNative(path: CString): CInt = extern
 
     @name("scalanative_file_descriptor_close")

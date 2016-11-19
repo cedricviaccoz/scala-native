@@ -12,11 +12,13 @@
 #include <dirent.h>
 #include <string.h>
 #include <stdlib.h>
+#include <errno.h>
 
 //values chosen accordingly to the corresponding "Hy" macros in Apache Harmony
 #define isDir 0 
 #define isFile 1
 #define newFilImplFlag (O_TRUNC | O_CREAT | O_EXCL | O_RDWR)
+#define newFileOrigFlags 0x8A
 #define newFileImplMode 0666
 
 #ifdef ZOS
@@ -167,12 +169,18 @@ uint64_t scalanative_last_mod(const char * path){
 /*this is a reimplementation of hyfile_open,
   with all of its parameter and branches simplified
   in order to only create à new File.*/
-int scalanative_new_file_impl(const char * path){
+int scalanative_file_open(const char * path, const int mode){
+  struct stat buffer;
   int32_t fd;
   int32_t fdflags;
+  stat(path, &buffer);
   fd = open(path, newFilImplFlag, newFileImplMode);
   if(fd == -1){
-    return -1;
+    switch(errno){
+      //the file already exists
+      case EEXIST: return -2;
+      default: return -1;
+    }
   }
   fdflags = fcntl(fd, F_GETFD, 0);
   fcntl(fd, F_SETFD, fdflags | FD_CLOEXEC);
@@ -184,7 +192,7 @@ int scalanative_file_descriptor_close(int fd){
 
 #if (FD_BIAS != 0)
     if (fd < FD_BIAS) {
-        /* Cannot close STD streams, and no other FD's should exist <FD_BIAS */
+        /* Cannot close STD streams, and no other FD's should exist <FD_BIAS*/
       return -1;
     }
 #endif

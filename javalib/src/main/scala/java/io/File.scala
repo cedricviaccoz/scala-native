@@ -9,7 +9,7 @@ import java.util.ArrayList
 class File private () extends Serializable with Comparable[File] {
     import File._
   	
-    private var path: String =_
+    private var path: String = null
 
     def compareTo(file: File): Int = {
         if(caseSensitive) getPath().compareTo(file.getPath())
@@ -17,7 +17,7 @@ class File private () extends Serializable with Comparable[File] {
     }
 
   	@transient 
-    var properPath: Array[Byte] = _
+    var properPath: Array[Byte] = null
 
 	def this(dir: File, name: String) = {
         this()
@@ -182,6 +182,7 @@ println("about to quit fixSlashes")
      */
     @throws(classOf[IOException])
     private def filePathCopy(filePath: Array[Byte]): CString = {
+
         var pathCopy: CString = stackalloc[CChar](HyMaxPath)
         val length: Int = filePath.length
         if(length > (HyMaxPath-1)){
@@ -190,7 +191,7 @@ println("about to quit fixSlashes")
         for(i <- 0 until length){
             pathCopy(i) = filePath(i)
         }
-        pathCopy(length) = '\0'   
+        pathCopy(length) = '\0'
         return pathCopy
     }
 
@@ -217,7 +218,9 @@ println("about to quit fixSlashes")
 
     //native funct.
     def existsImpl(filePath: Array[Byte]): Boolean = {
+println("in existsImpl")
         var pathCopy: CString = filePathCopy(filePath)
+println("filePathCopyIsASuccess")
         return (CFile.fileAttribute(pathCopy) >= 0)
     }
 
@@ -458,10 +461,11 @@ println("about to quit fixSlashes")
     else path.toLowerCase().hashCode ^ 1234321
 
     def isAbsolute(): Boolean = {
+println("what is path ? " + path)
         if (File.separatorChar == '\\') {
             // for windows
             if (path.length() > 1 && path(0) == File.separatorChar
-                    && path.charAt(1) == File.separatorChar) {
+                    && path(1) == File.separatorChar) {
                 return true
             }
             if (path.length() > 2) {
@@ -729,7 +733,9 @@ println("about to quit fixSlashes")
 
 
         var findhandle = CFile.fileFindFirst(pathCopy, filename)
+
         //not sure about this since it probably sent back a pointer...
+        //TODO: findhandle is a pointer, this will alway yield false
         if(findhandle == -1)
             return null
 
@@ -814,15 +820,16 @@ println("about to quit fixSlashes")
     private def newFileImpl(filePath: Array[Byte]): Int = {
         val pathCopy: CString = filePathCopy(filePath)
         val portFD: CInt = CFile.newFileNative(pathCopy)
-        if(portFD == -1){
-//TODO:
-            //should find a way to treat the case of 
-            //the file can't be created because it alread exists
-            //return 2 in this case
-            return 1
+        portFD match {
+            case -1 => 
+                return -1
+            //this case is whenever whe can't create the file because it already exists
+            case -2 => 
+                return 1
+            case _ =>   
+                CFile.fileDescriptorClose(portFD)
+                return 0      
         }
-        CFile.fileDescriptorClose(portFD)
-        return 0
     }
 
    private[io] def setProperPath(): Array[Byte] = {
@@ -840,6 +847,7 @@ println("about to quit fixSlashes")
         if(userdir == null){
             throw new IOException("getcwd() error in trying to get user directory")
         }
+
         if (path.length() == 0) {
             properPath = HyUtil.getUTF8Bytes(userdir);
             return properPath
