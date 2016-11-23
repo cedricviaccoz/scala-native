@@ -4,48 +4,29 @@ import java.io.CFile
 
 import scala.collection.mutable
 
+
 object FileTest {
   def main(args: Array[String]): Unit = {
-    fromCStringTest()
     //filePathTest()
     //fileNotCreatedDoesNotExists()
-    //fileCanBeCreated()
+    fileCanBeCreated()
     //compareToTest()
     //equalsTest()
     //getParentTest()
   }
 
-  def locagetUserDir(): CString = {
-      var buff: CString = stackalloc[CChar](4096)
-      var res: CString = scala.scalanative.posix.unistd.getcwd(buff, 4095)
-      return res;
-  }
 
-  def fromCStringTest(): Unit = {
+  /*def fromCStringTest(): Unit = {
 
 
-    val bytes: CString = locagetUserDir()
-    var c = 0;
-    while (c < 31){
-      val a = !(bytes+c)
-      println("what ?"+a)
-      c = c + 1
-    }
+    val bytes: CString = 
     if(bytes == null){
-      println("NULLL AHAHAHAH")
+      println("NULLL")
     }else{
       val t = "AHAHAHAHA"
       val transformedString: String = fromCString(bytes)
-      val length: Int = transformedString.length()
-      println(length)
-      println(transformedString)
-      println(transformedString(0))
-      println(transformedString(1))
-      println(transformedString(2))
-      println(transformedString(3))
-      println("does a normal String works ? " + t) 
     }
-  }
+  }*/
 
   def filePathTest(): Unit = {
   	val s = "test"
@@ -60,11 +41,12 @@ object FileTest {
   }
 
   def fileCanBeCreated(): Unit = {
-  	val s = "newExistsFileTest"
+  	val s = "newExistsFileTest.txt"
   	val f = new File(s)
   	assert(f.createNewFile())
   	assert(f.exists() == true)
-    //f.delete()
+    f.delete()
+    assert(f.exists() == false)
   }
 
   def canNotCreateTwoTimeTheSameFile(): Unit = {

@@ -134,7 +134,6 @@ package object native {
     var c = 0
     while (c < len) {
       bytes(c) = !(cstr + c)
-println("char : "+ bytes(c))
       c += 1
     }
 

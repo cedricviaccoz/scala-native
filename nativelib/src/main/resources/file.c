@@ -21,8 +21,6 @@
 #define newFileOrigFlags 0x8A
 #define newFileImplMode 0666
 
-//apparently limits.h was bogus
-#define PATH_MAX 1024
 
 #ifdef ZOS
 #define FD_BIAS 1000
@@ -255,17 +253,6 @@ int scalanative_file_attr(const char *path)
 const char * scalanative_get_os_encoding(){
   setlocale(LC_ALL, "");
   return nl_langinfo(CODESET);
-}
-
-const char * scalanative_get_user_dir(){
-    char buff[PATH_MAX] = "";
-    char * res = getcwd(buff, PATH_MAX-1);
-    if(res != NULL){
-      return res;
-    }else{
-      fprintf(stderr, "getcwd() error");
-      return NULL;
-    }
 }
 
 const char * scalanative_get_temp_dir(){

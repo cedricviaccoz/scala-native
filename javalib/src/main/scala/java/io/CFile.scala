@@ -52,9 +52,6 @@ object CFile{
     @name("scalanative_get_os_encoding")
     def getOsEncoding(): CString = extern
 
-    @name("scalanative_get_user_dir")
-    def getUserDir(): CString = extern
-
     @name("scalanative_get_temp_dir")
     def getTempDir(): CString = extern
 

@@ -173,7 +173,9 @@ println("is a file")
     @throws(classOf[IOException])
     private def deleteFileImpl(filePath: Array[Byte]): Boolean = {
         var pathCopy: CString = filePathCopy(filePath)
+println("was able to make copy of path in cas of deleteFile")
         var result: Int = unlink(pathCopy)   
+println("was able to delete file")
         return result == 0
     }
 
@@ -493,6 +495,7 @@ println("filePathCopyIsASuccess")
     //native funct.
     private def isDirectoryImpl(filePath: Array[Byte]): Boolean = {
         var pathCopy: CString = filePathCopy(filePath)
+println("made the pathCopy in case of isDirectoryImpl")
         return (CFile.fileAttribute(pathCopy) == 0)
     }
 
@@ -821,7 +824,9 @@ println("filePathCopyIsASuccess")
     @throws(classOf[IOException])
     private def newFileImpl(filePath: Array[Byte]): Int = {
         val pathCopy: CString = filePathCopy(filePath)
+println("Made the pathCopy")
         val portFD: CInt = CFile.newFileNative(pathCopy)
+println("Made the newFile creation")
         portFD match {
             case -1 => 
                 return -1
@@ -846,7 +851,7 @@ println("file successfully created and its descriptor closed")
         }
         // Check security by getting user.dir when the path is not absolute
         
-        var userdir: String = fromCString(CFile.getUserDir())
+        var userdir: String = getUserDir()
         if(userdir == null){
             throw new IOException("getcwd() error in trying to get user directory")
         }
@@ -882,7 +887,15 @@ println("wasnt elif")
 println("nothing went wrong")
         result += path;
         properPath = HyUtil.getUTF8Bytes(result)
+println("Got The UTF8 Bytes")
         return properPath
+    }
+
+
+    private def getUserDir(): String = {
+        var buff: CString = stackalloc[CChar](4096)
+        var res: CString = getcwd(buff, 4095)
+        fromCString(res)  
     }
 
     def renameTo(des: java.io.File): Boolean = 
