@@ -152,10 +152,13 @@ println("about to quit fixSlashes")
 
     def delete(): Boolean = {
         var propPath: Array[Byte] = setProperPath()
+println("propPath successfully generated")
         if ((path.length() != 0) && isDirectoryImpl(propPath)) {
+println("is a dir")
             return deleteDirImpl(propPath)
         }
-        else return deleteFileImpl(propPath);
+println("is a file")
+        return deleteFileImpl(propPath)
     }
 
     //native funct.
@@ -461,7 +464,6 @@ println("filePathCopyIsASuccess")
     else path.toLowerCase().hashCode ^ 1234321
 
     def isAbsolute(): Boolean = {
-println("what is path ? " + path)
         if (File.separatorChar == '\\') {
             // for windows
             if (path.length() > 1 && path(0) == File.separatorChar
@@ -828,6 +830,7 @@ println("what is path ? " + path)
                 return 1
             case _ =>   
                 CFile.fileDescriptorClose(portFD)
+println("file successfully created and its descriptor closed")
                 return 0      
         }
     }
@@ -849,10 +852,10 @@ println("what is path ? " + path)
         }
 
         if (path.length() == 0) {
-            properPath = HyUtil.getUTF8Bytes(userdir);
+            properPath = HyUtil.getUTF8Bytes(userdir)
             return properPath
         }
-        var length: Int = userdir.length();
+        var length: Int = userdir.length()
         
         // Handle windows-like path
         if (path(0) == '\\') {
@@ -864,14 +867,19 @@ println("what is path ? " + path)
         }
 
         // Handle separator
-        var result: String = userdir;
+        var result: String = userdir
+println("This is userdir value : " + userdir)
+println("maybe userdir(length-1)")
         if (userdir(length - 1) != File.separatorChar) {
+println("maybe path(0) != File.separatorChar")
             if (path(0) != File.separatorChar) {
                 result += separator
             }
         } else if (path(0) == File.separatorChar) {
+println("wasnt elif")
             result = result.substring(0, length - 2)
         }
+println("nothing went wrong")
         result += path;
         properPath = HyUtil.getUTF8Bytes(result)
         return properPath

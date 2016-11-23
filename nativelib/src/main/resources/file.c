@@ -21,6 +21,9 @@
 #define newFileOrigFlags 0x8A
 #define newFileImplMode 0666
 
+//apparently limits.h was bogus
+#define PATH_MAX 1024
+
 #ifdef ZOS
 #define FD_BIAS 1000
 #undef fwrite
@@ -274,7 +277,8 @@ const char * scalanative_get_temp_dir(){
 
 #ifdef TEST
 int main(void){
-  printf("tmp folder: %s", scalanative_get_temp_dir());
+  printf("userdir %s\n", scalanative_get_user_dir());
+  //printf("tmp folder: %s", scalanative_get_temp_dir());
   return 0;
 }
 #endif

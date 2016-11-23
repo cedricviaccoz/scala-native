@@ -1,0 +1,3 @@
+Questions : 
+
+-How to emulate the synchronized (obj) {} from java ?

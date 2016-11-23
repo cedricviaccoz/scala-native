@@ -12,4 +12,5 @@ object unistd {
   def unlink(path: CString): CInt = extern  
   def access(pathname: CString, mode: CInt): CInt = extern
   def readlink(path: CString, buf: CString, bufsize: CSize): CInt = extern
+  def getcwd(buf: CString, size: CSize): CString = extern
 }
