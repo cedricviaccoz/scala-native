@@ -80,7 +80,6 @@ class File private () extends Serializable with Comparable[File] {
 //apparently this java like function bugs at newPath(length) = pathChar
 
 /*    private def fixSlashes(origPath: String): String = {
-println("entered fixSlahes")
         var uncIndex: Int = 1
         var length: Int = origPath.length() 
         var newLength: Int = 0
@@ -89,18 +88,14 @@ println("entered fixSlahes")
         } else if (length > 2 && origPath(1) == ':') {
             uncIndex = 2;
         }
-println("Before the for loop")
         var foundSlash: Boolean = false
         var newPath: Array[Char] = origPath.toCharArray()
         for(i <- 0 until length) {
-println("iteration #"+i)
             var pathChar: Char = newPath(i)
             if ((separatorChar == '\\' && pathChar == '\\')
                 || pathChar == '/') {
-println("in if #1")
                 /* UNC Name requires 2 leading slashes */
                 if ((foundSlash && i == uncIndex) || !foundSlash) {
-println("in if #2")
                     newLength += 1
                     newPath(newLength) = separatorChar
                     foundSlash = true
@@ -111,7 +106,6 @@ println("in if #2")
                         && uncIndex > 0
                         && (newLength == 2 || (newLength == 3 && newPath(1) == separatorChar))
                         && (newPath(0) == separatorChar)) {
-println("in if #3")
                     newPath(0) = newPath(newLength - 1)
                     newLength = 1
                     // allow trailing slash after drive letter
@@ -120,16 +114,13 @@ println("in if #3")
                 newLength += 1
                 newPath(newLength) = pathChar
                 foundSlash = false
-println("end of loop #" + i)
             }
         }
-println("about to remove trailing slash")
         // remove trailing slash
         if (foundSlash
                 && (newLength > (uncIndex + 1) || (newLength == 2 && newPath(0) != separatorChar))) {
             newLength -= 1
         }
-println("about to quit fixSlashes")
         return new String(newPath, 0, newLength)
     }*/
 
@@ -152,12 +143,11 @@ println("about to quit fixSlashes")
 
     def delete(): Boolean = {
         var propPath: Array[Byte] = setProperPath()
+//Decisive.
 println("propPath successfully generated")
         if ((path.length() != 0) && isDirectoryImpl(propPath)) {
-println("is a dir")
             return deleteDirImpl(propPath)
         }
-println("is a file")
         return deleteFileImpl(propPath)
     }
 
@@ -173,9 +163,7 @@ println("is a file")
     @throws(classOf[IOException])
     private def deleteFileImpl(filePath: Array[Byte]): Boolean = {
         var pathCopy: CString = filePathCopy(filePath)
-println("was able to make copy of path in cas of deleteFile")
         var result: Int = unlink(pathCopy)   
-println("was able to delete file")
         return result == 0
     }
 
@@ -223,9 +211,9 @@ println("was able to delete file")
 
     //native funct.
     def existsImpl(filePath: Array[Byte]): Boolean = {
+//Decisive.
 println("in existsImpl")
         var pathCopy: CString = filePathCopy(filePath)
-println("filePathCopyIsASuccess")
         return (CFile.fileAttribute(pathCopy) >= 0)
     }
 
@@ -495,7 +483,6 @@ println("filePathCopyIsASuccess")
     //native funct.
     private def isDirectoryImpl(filePath: Array[Byte]): Boolean = {
         var pathCopy: CString = filePathCopy(filePath)
-println("made the pathCopy in case of isDirectoryImpl")
         return (CFile.fileAttribute(pathCopy) == 0)
     }
 
@@ -824,8 +811,10 @@ println("made the pathCopy in case of isDirectoryImpl")
     @throws(classOf[IOException])
     private def newFileImpl(filePath: Array[Byte]): Int = {
         val pathCopy: CString = filePathCopy(filePath)
+//Decisive.
 println("Made the pathCopy")
         val portFD: CInt = CFile.newFileNative(pathCopy)
+//Decisive
 println("Made the newFile creation")
         portFD match {
             case -1 => 
@@ -835,7 +824,6 @@ println("Made the newFile creation")
                 return 1
             case _ =>   
                 CFile.fileDescriptorClose(portFD)
-println("file successfully created and its descriptor closed")
                 return 0      
         }
     }
@@ -873,21 +861,15 @@ println("file successfully created and its descriptor closed")
 
         // Handle separator
         var result: String = userdir
-println("This is userdir value : " + userdir)
-println("maybe userdir(length-1)")
         if (userdir(length - 1) != File.separatorChar) {
-println("maybe path(0) != File.separatorChar")
-            if (path(0) != File.separatorChar) {
+        if (path(0) != File.separatorChar) {
                 result += separator
             }
         } else if (path(0) == File.separatorChar) {
-println("wasnt elif")
             result = result.substring(0, length - 2)
         }
-println("nothing went wrong")
         result += path;
         properPath = HyUtil.getUTF8Bytes(result)
-println("Got The UTF8 Bytes")
         return properPath
     }
 
