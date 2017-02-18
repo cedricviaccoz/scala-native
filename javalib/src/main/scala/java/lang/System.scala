@@ -29,6 +29,7 @@ object System {
   def getProperty(key: String): String                  = ???
   def getProperty(key: String, default: String): String = ???
   def setProperty(key: String, value: String): String   = ???
+  def currentTimeMillis(): Long                         = ???
 
   def nanoTime(): CLong = time.scalanative_nano_time
 

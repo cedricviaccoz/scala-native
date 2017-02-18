@@ -60,9 +60,11 @@ object Charset {
   def defaultCharset(): Charset =
     UTF_8
 
-  def forName(charsetName: String): Charset =
-    CharsetMap.getOrElse(charsetName.toLowerCase,
-                         throw new UnsupportedCharsetException(charsetName))
+  def forName(charsetName: String): Charset = {
+    val m = CharsetMap
+    m.getOrElse(toLowerCaseCharset(charsetName),
+                throw new UnsupportedCharsetException(charsetName))
+  }
 
   def isSupported(charsetName: String): Boolean =
     CharsetMap.contains(charsetName.toLowerCase)
@@ -123,5 +125,13 @@ object Charset {
     for (s <- Seq("utf-16", "utf_16", "unicode", "unicodebig")) m(s) = UTF_16
 
     m
+  }
+
+  //quick workaround to compensate the unimplementation of String.toLowerCase
+  //I only declare what I'm using on my machine.
+  private def toLowerCaseCharset(charset: String): String = charset match {
+    case "UTF-8" => "utf-8"
+    case "UTF8"  => "utf8"
+    case _       => charset
   }
 }
